@@ -1,3 +1,6 @@
 {
-    "Blog": true
+    "Blog": true,
+    "Authentication": true,
+    "Organization": true,
+    "AccessControl": true
 }
