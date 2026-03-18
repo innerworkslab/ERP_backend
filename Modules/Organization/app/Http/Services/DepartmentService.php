@@ -26,7 +26,7 @@ class DepartmentService
         ?string $status = null
     ) {
         try {
-            $result = $this->department_repository->getDataWithPagination(page: $page, perPage: $perPage, status: $status, searches: $searches, with: $with);
+            $result = $this->department_repository->getDataWithPagination(page: $page, perPage: $perPage, status: $status, searches: $searches, with: $with, whereHas: $whereHas, conditions: $conditions);
             return $result;
         } catch (Exception $e) {
             logger()->error('Error : Failed to fetch department data with pagination: ' . $e->getMessage());

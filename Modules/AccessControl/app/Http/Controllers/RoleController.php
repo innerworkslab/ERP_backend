@@ -1,25 +1,25 @@
 <?php
 
-namespace Modules\Organization\app\Http\Controllers;
+namespace Modules\AccessControl\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Traits\ApiResponser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Modules\Organization\app\Http\Services\BranchService;
-use Modules\Organization\app\Http\Requests\Branch\CreateRequest;
-use Modules\Organization\app\Http\Requests\Branch\ListingRequest;
-use Modules\Organization\app\Http\Requests\Branch\UpdateRequest;
+use Modules\AccessControl\app\Http\Services\RoleService;
+use Modules\AccessControl\app\Http\Requests\Role\CreateRequest;
+use Modules\AccessControl\app\Http\Requests\Role\ListingRequest;
+use Modules\AccessControl\app\Http\Requests\Role\UpdateRequest;
 
-class BranchController extends Controller
+class RoleController extends Controller
 {
     use ApiResponser;
 
-    private $branch_service;
+    private $role_service;
 
-    public function __construct(BranchService $branch_service)
+    public function __construct(RoleService $role_service)
     {
-        $this->branch_service = $branch_service;
+        $this->role_service = $role_service;
     }
 
     public function index(ListingRequest $request)
@@ -41,8 +41,6 @@ class BranchController extends Controller
 
                 $searches = [
                     'name' => $search,
-                    'prefix' => $search,
-                    'location' => $search,
                 ];
 
                 // if (in_array(strtolower($search), ['active', 'inactive'])) {
@@ -50,12 +48,26 @@ class BranchController extends Controller
                 //     $status = $search;
                 // }
             }
+
             if (!empty($validated['status'])) {
                 $conditions['status'] = $validated['status'];
             }
-            $with = ['created_by', 'updated_by'];
-            $res_data = $this->branch_service->getDataWithPagination($per_page, $page, status: $status, searches: $searches, with: $with, conditions: $conditions);
-            return $this->paginatedSuccessResponse($res_data, 200, 'Branch Lists');
+
+            if (!empty($validated['parent_role_id'])) {
+                $conditions['parent_role_id'] = $validated['parent_role_id'];
+            }
+
+            if (!empty($validated['branch_id'])) {
+                $conditions['branch_id'] = $validated['branch_id'];
+            }
+
+            if (!empty($validated['department_id'])) {
+                $conditions['department_id'] = $validated['department_id'];
+            }
+
+            $with = ['parentRole', 'children', 'branch', 'department', 'features', 'created_by', 'updated_by'];
+            $res_data = $this->role_service->getDataWithPagination($per_page, $page, status: $status, searches: $searches, with: $with, conditions: $conditions);
+            return $this->paginatedSuccessResponse($res_data, 200, 'Role Lists');
         } catch (\Exception $e) {
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
@@ -68,11 +80,11 @@ class BranchController extends Controller
             if (!is_numeric($id)) {
                 return $this->errorResponse('ID must be an integer!', 422);
             }
-            $data = $this->branch_service->find($id);
+            $data = $this->role_service->find($id);
             if ($data) {
-                return $this->successResponse($data, 200, 'branch');
+                return $this->successResponse($data, 200, 'role');
             } else {
-                return $this->errorResponse('Branch not found', 404);
+                return $this->errorResponse('Role not found', 404);
             }
         } catch (\Exception $e) {
             logger()->error($e);
@@ -88,8 +100,8 @@ class BranchController extends Controller
                 return $this->validationErrorResponse($validator);
             }
             $validated = $request->validated();
-            $result = $this->branch_service->create($validated);
-            return $this->successResponse($result, 200, 'Branch is created successfully');
+            $result = $this->role_service->create($validated);
+            return $this->successResponse($result, 200, 'Role is created successfully');
         } catch (\Exception $e) {
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
@@ -104,12 +116,12 @@ class BranchController extends Controller
                 return $this->validationErrorResponse($validator);
             }
             $validated = $request->validated();
-            $data = $this->branch_service->whereFirst('id', $id);
+            $data = $this->role_service->whereFirst('id', $id);
             if ($data) {
-                $result = $this->branch_service->update($id, $validated);
-                return $this->successResponse($result, 200, 'Branch is updated successfully');
+                $result = $this->role_service->update($id, $validated);
+                return $this->successResponse($result, 200, 'Role is updated successfully');
             } else {
-                return $this->errorResponse('Branch not found', 404);
+                return $this->errorResponse('Role not found', 404);
             }
         } catch (\Exception $e) {
             logger()->error($e);
@@ -124,13 +136,13 @@ class BranchController extends Controller
             if (!is_numeric($id)) {
                 return $this->errorResponse('ID must be an integer!', 422);
             }
-            $data = $this->branch_service->whereFirst('id', $id);
+            $data = $this->role_service->whereFirst('id', $id);
             if ($data) {
-                if ($this->branch_service->delete($id)) {
-                    return $this->successResponse([], 200, 'Branch deleted successfully!');
+                if ($this->role_service->delete($id)) {
+                    return $this->successResponse([], 200, 'Role deleted successfully!');
                 }
             } else {
-                return $this->errorResponse('Branch not found!', 500);
+                return $this->errorResponse('Role not found!', 500);
             }
         } catch (\Exception $e) {
             logger()->error($e);
@@ -144,12 +156,12 @@ class BranchController extends Controller
             if (!is_numeric($id)) {
                 return $this->errorResponse('ID must be an integer!', 422);
             }
-            $data = $this->branch_service->whereFirst('id', $id);
+            $data = $this->role_service->whereFirst('id', $id);
             if ($data) {
-                $this->branch_service->toggleBranchStatus($data);
+                $this->role_service->toggleRoleStatus($data);
                 return $this->successResponse([], 200, 'Toggle status successfully');
             } else {
-                return $this->errorResponse('Branch not found', 404);
+                return $this->errorResponse('Role not found', 404);
             }
         } catch (\Exception $e) {
             logger()->error($e);
