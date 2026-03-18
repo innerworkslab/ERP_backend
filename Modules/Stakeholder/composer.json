@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/stakeholder",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Stakeholder\\": "app/",
+            "Modules\\Stakeholder\\Database\\Factories\\": "database/factories/",
+            "Modules\\Stakeholder\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Stakeholder\\Tests\\": "tests/"
+        }
+    }
+}

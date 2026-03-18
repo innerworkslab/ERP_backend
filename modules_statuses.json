@@ -2,5 +2,6 @@
     "Blog": true,
     "Authentication": true,
     "Organization": true,
-    "AccessControl": true
+    "AccessControl": true,
+    "Stakeholder": true
 }
