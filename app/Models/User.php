@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Modules\AccessControl\App\Models\Feature;
-use Modules\AccessControl\App\Models\Role;
-use Modules\Organization\App\Models\Branch;
-use Modules\Organization\App\Models\Department;
+use Modules\AccessControl\app\Models\Feature;
+use Modules\AccessControl\app\Models\Role;
+use Modules\Organization\app\Models\Branch;
+use Modules\Organization\app\Models\Department;
 
 class User extends Authenticatable
 {
