@@ -14,7 +14,7 @@ class FeatureSeeder extends Seeder
     {
         $features = [
 
-            // Branch module
+            // Branch 
             [
                 'name' => 'View Branch',
                 'key' => 'view_branch',
@@ -39,7 +39,7 @@ class FeatureSeeder extends Seeder
                 'module' => 'Organization',
                 'description' => 'Delete branch'
             ],
-            // Department module
+            // Department 
             [
                 'name' => 'View Department',
                 'key' => 'view_department',
@@ -63,6 +63,31 @@ class FeatureSeeder extends Seeder
                 'key' => 'delete_department',
                 'module' => 'Organization',
                 'description' => 'Delete department'
+            ],
+            // Role 
+            [
+                'name' => 'View Role',
+                'key' => 'view_role',
+                'module' => 'Organization',
+                'description' => 'View role list'
+            ],
+            [
+                'name' => 'Create Role',
+                'key' => 'create_role',
+                'module' => 'Organization',
+                'description' => 'Create new role'
+            ],
+            [
+                'name' => 'Update Role',
+                'key' => 'update_role',
+                'module' => 'Organization',
+                'description' => 'Update role'
+            ],
+            [
+                'name' => 'Delete Role',
+                'key' => 'delete_role',
+                'module' => 'Organization',
+                'description' => 'Delete role'
             ],
         ];
 

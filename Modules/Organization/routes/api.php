@@ -16,6 +16,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/departments')->group(function () {
         Route::patch('{id}/toggle-status', [DepartmentController::class, 'toggleActive'])->middleware('feature:update_department');
         Route::get('/all', [DepartmentController::class, 'index'])->middleware('feature:view_department');
+        Route::get('/by-branch', [DepartmentController::class, 'departmentsBySelectedBranch'])->middleware('feature:view_department');
         Route::post('', [DepartmentController::class, 'create'])->middleware('feature:create_department');
         Route::put('{id}', [DepartmentController::class, 'update'])->middleware('feature:update_department');
         Route::get('{id}', [DepartmentController::class, 'findOrFail'])->middleware('feature:view_department');

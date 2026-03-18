@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Organization\app\Http\Requests\Department;
+namespace Modules\AccessControl\app\Http\Requests\Role;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -25,6 +25,9 @@ class ListingRequest extends FormRequest
             'page' => 'integer',
             'per_page' => 'integer',
             'search'=> 'string',
+            'parent_role_id' => 'integer|exists:roles,id',
+            'branch_id' => 'integer|exists:branches,id',
+            'department_id' => 'integer|exists:departments,id',
             'status' => 'string|in:active,inactive'
         ];
     }
