@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -58,6 +59,18 @@ class User extends Authenticatable
         ];
     }
 
+    public function toArray()
+    {
+        $attributes = parent::toArray();
+        if (array_key_exists('created_at', $attributes)) {
+            $attributes['created_at'] = Carbon::parse($attributes['created_at'])->format('Y-m-d H:i:s');
+        }
+        if (array_key_exists('updated_at', $attributes)) {
+            $attributes['updated_at'] = Carbon::parse($attributes['updated_at'])->format('Y-m-d H:i:s');
+        }
+        return $attributes;
+    }
+
     public function role()
     {
         return $this->belongsTo(Role::class);
@@ -83,20 +96,20 @@ class User extends Authenticatable
 
     public function hasFeature($featureKey)
     {
-        if ($this->role && $this->role->is_super) {
-            return true;
-        }
+        // if ($this->role && $this->role->is_super) {
+        //     return true;
+        // }
 
-        $roleFeature = $this->role
-            ->features()
-            ->where('key', $featureKey)
-            ->exists();
+        // $roleFeature = $this->role
+        //     ->features()
+        //     ->where('key', $featureKey)
+        //     ->exists();
 
         $userFeature = $this
             ->features()
             ->where('key', $featureKey)
             ->exists();
 
-        return $roleFeature || $userFeature;
+        return $userFeature;
     }
 }

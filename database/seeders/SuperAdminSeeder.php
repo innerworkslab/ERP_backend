@@ -18,7 +18,7 @@ class SuperAdminSeeder extends Seeder
     {
         $role = Role::create([
             'name' => 'Super Admin',
-            'is_super' => true,
+            // 'is_super' => true,
             'branch_id' => null,
             'department_id' => null,
             'status' => 'active'
@@ -28,7 +28,7 @@ class SuperAdminSeeder extends Seeder
 
         $role->features()->sync($features);
 
-        User::create([
+        $user = User::create([
             'name' => 'Super Admin',
             'phone_number' => '09123456789',
             'email'=> 'superadmin@example.com',
@@ -40,5 +40,7 @@ class SuperAdminSeeder extends Seeder
             'sale_incentive' => null,
             'status' => 'active'
         ]);
+
+        $user->features()->sync($features);
     }
 }
