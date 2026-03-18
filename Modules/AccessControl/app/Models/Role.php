@@ -18,7 +18,7 @@ class Role extends Model
         'parent_role_id',
         'branch_id',
         'department_id',
-        'is_super',
+        // 'is_super',
         'status'
     ];
 

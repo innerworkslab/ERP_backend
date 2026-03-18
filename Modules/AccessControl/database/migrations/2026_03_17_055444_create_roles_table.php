@@ -30,7 +30,7 @@ return new class extends Migration {
                 ->constrained()
                 ->nullOnDelete();
 
-            $table->boolean('is_super')->default(false);
+            // $table->boolean('is_super')->default(false);
 
             $table->enum('status', ['active', 'inactive']);
 
