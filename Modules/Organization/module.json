@@ -5,7 +5,7 @@
     "keywords": [],
     "priority": 0,
     "providers": [
-        "Modules\\Organization\\App\\Providers\\OrganizationServiceProvider"
+        "Modules\\Organization\\app\\Providers\\OrganizationServiceProvider"
     ],
     "files": []
 }

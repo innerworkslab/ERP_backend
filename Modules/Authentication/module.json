@@ -5,7 +5,7 @@
     "keywords": [],
     "priority": 0,
     "providers": [
-        "Modules\\Authentication\\App\\Providers\\AuthenticationServiceProvider"
+        "Modules\\Authentication\\app\\Providers\\AuthenticationServiceProvider"
     ],
     "files": []
 }
