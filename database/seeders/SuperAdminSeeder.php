@@ -6,8 +6,8 @@ use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Modules\AccessControl\App\Models\Feature;
-use Modules\AccessControl\App\Models\Role;
+use Modules\AccessControl\app\Models\Feature;
+use Modules\AccessControl\app\Models\Role;
 
 class SuperAdminSeeder extends Seeder
 {

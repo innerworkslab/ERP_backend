@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Authentication\App\Http\Controllers\AuthenticationController;
+use Modules\Authentication\app\Http\Controllers\AuthenticationController;
 
 
 Route::prefix("v1/users")->group(function () {
