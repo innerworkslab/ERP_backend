@@ -3,11 +3,16 @@
 namespace Modules\Stakeholder\app\Http\Services\Customer;
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Modules\Stakeholder\app\Models\Customer;
 use Modules\Stakeholder\app\Http\Repositories\Customer\CustomerRepository;
 
 class CustomerService
 {
+    private const PREFIX = 'CUS';
+    private const RUNNING_NUMBER_LENGTH = 6;
+
     public function __construct(private CustomerRepository $customerRepository)
     {
     }
@@ -47,9 +52,20 @@ class CustomerService
 
     public function create(array $attributes): Customer
     {
-        $attributes['code'] = $this->generateCode();
+        return DB::transaction(function () use ($attributes) {
+            $branchId = (int) ($attributes['branch_id'] ?? 0);
+            $runningNumber = $this->getNextRunningNumber($branchId);
 
-        return $this->customerRepository->create($attributes);
+            $attributes['code'] = 'TMP-CUS-' . uniqid();
+
+            $customer = $this->customerRepository->create($attributes);
+
+            $customer->update([
+                'code' => $this->generateCode($customer->id, $branchId, $runningNumber),
+            ]);
+
+            return $customer->fresh();
+        });
     }
 
     public function findOrFail(int $id): Customer
@@ -78,22 +94,36 @@ class CustomerService
         return $this->customerRepository->delete($id);
     }
 
-    private function generateCode(): string
+    private function generateCode(int $id, int $branchId, int $runningNumber): string
     {
-        $prefix = 'CUS';
-        $length = 6;
-        $latestCode = (string) Customer::query()->latest('id')->value('code');
-        $runningNumber = 1;
-
-        if (preg_match('/\d+$/', $latestCode, $numberMatches)) {
-            $runningNumber = ((int) $numberMatches[0]) + 1;
+        if ($branchId <= 0) {
+            throw ValidationException::withMessages([
+                'branch_id' => ['Branch ID is required for customer code generation.'],
+            ]);
         }
 
-        do {
-            $code = $prefix . str_pad((string) $runningNumber, $length, '0', STR_PAD_LEFT);
-            $runningNumber++;
-        } while (Customer::query()->where('code', $code)->exists());
+        return $id . '-' . $branchId . '-' . self::PREFIX . '-' . str_pad((string) $runningNumber, self::RUNNING_NUMBER_LENGTH, '0', STR_PAD_LEFT);
+    }
 
-        return $code;
+    private function getNextRunningNumber(int $branchId): int
+    {
+        if ($branchId <= 0) {
+            throw ValidationException::withMessages([
+                'branch_id' => ['Branch ID is required for customer code generation.'],
+            ]);
+        }
+
+        $baseCodePattern = '/^\d+-' . preg_quote((string) $branchId, '/') . '-' . self::PREFIX . '-(\d+)$/';
+        $latestCode = (string) Customer::query()
+            ->where('branch_id', $branchId)
+            ->latest('id')
+            ->lockForUpdate()
+            ->value('code');
+
+        if ($latestCode !== '' && preg_match($baseCodePattern, $latestCode, $matches)) {
+            return ((int) $matches[1]) + 1;
+        }
+
+        return 1;
     }
 }
