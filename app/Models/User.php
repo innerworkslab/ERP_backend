@@ -8,13 +8,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Modules\AccessControl\App\Models\Feature;
-use Modules\AccessControl\App\Models\Role;
-use Modules\Organization\App\Models\Branch;
-use Modules\Organization\App\Models\Department;
+
 use Modules\Staff\app\Models\StaffBankingInformation;
 use Modules\Staff\app\Models\StaffEmploymentInformation;
 use Modules\Staff\app\Models\StaffPersonalInformation;
+use Modules\AccessControl\app\Models\Feature;
+use Modules\AccessControl\app\Models\Role;
+use Modules\AccessControl\app\Models\Permission;
+use Modules\Organization\app\Models\Branch;
+use Modules\Organization\app\Models\Department;
 
 class User extends Authenticatable
 {
@@ -87,15 +89,15 @@ class User extends Authenticatable
         return $this->belongsTo(Department::class);
     }
 
-    public function features()
+    public function permissions()
     {
         return $this->belongsToMany(
-            Feature::class,
-            'feature_user'
+            Permission::class,
+            'user_permission'
         );
     }
 
-    public function hasFeature($featureKey)
+    public function hasPermission($permissionKey)
     {
         // if ($this->role && $this->role->is_super) {
         //     return true;
@@ -106,12 +108,12 @@ class User extends Authenticatable
         //     ->where('key', $featureKey)
         //     ->exists();
 
-        $userFeature = $this
-            ->features()
-            ->where('key', $featureKey)
+        $userPermission = $this
+            ->permissions()
+            ->where('key', $permissionKey)
             ->exists();
 
-        return $userFeature;
+        return $userPermission;
     }
 
     public function staffPersonalInformation()

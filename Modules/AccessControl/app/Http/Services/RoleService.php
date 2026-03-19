@@ -98,4 +98,19 @@ class RoleService
             throw $e;
         }
     }
+
+    public function getRolesWithoutPagination(
+        array $searches = null,
+        array $conditions = [],
+        array $with = [],
+        ?string $status = null
+    ) {
+        try {
+            $result = $this->role_repository->getRolesWithoutPagination(status: $status, searches: $searches, with: $with, conditions: $conditions);
+            return $result;
+        } catch (Exception $e) {
+            logger()->error('Error : Failed to fetch role data without pagination: ' . $e->getMessage());
+            throw $e;
+        }
+    }
 }
