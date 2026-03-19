@@ -3,6 +3,7 @@
 namespace Modules\Stakeholder\app\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\Organization\app\Models\Branch;
 
 class Supplier extends Model
 {
@@ -35,4 +36,9 @@ class Supplier extends Model
         'opening' => 'decimal:2',
         'birthday' => 'date',
     ];
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }
