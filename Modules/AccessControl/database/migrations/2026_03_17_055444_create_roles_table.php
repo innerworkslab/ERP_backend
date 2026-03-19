@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
 
-            $table->string('name')->unique();
+            $table->string('name');
 
             $table->foreignId('parent_role_id')
                 ->nullable()
@@ -35,6 +35,8 @@ return new class extends Migration {
             $table->enum('status', ['active', 'inactive']);
 
             $table->timestamps();
+
+            $table->unique(['name', 'branch_id', 'department_id'], 'roles_name_branch_department_unique');
         });
     }
 

@@ -4,7 +4,7 @@ namespace Modules\Organization\app\Http\Requests\Department;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ListingRequest extends FormRequest
+class DepartmentsBySelectedBranchRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,8 +24,9 @@ class ListingRequest extends FormRequest
         return [
             'page' => 'integer',
             'per_page' => 'integer',
-            'search'=> 'string',
-            'status' => 'string|in:active,inactive'
+            'search' => 'string',
+            'status' => 'string|in:active,inactive',
+            'branch_id' => 'required|integer|exists:branches,id',
         ];
     }
 

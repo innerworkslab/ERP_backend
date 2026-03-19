@@ -1,17 +1,17 @@
 <?php
 
-namespace Modules\Organization\app\Http\Services;
+namespace Modules\AccessControl\app\Http\Services;
 
 use Exception;
-use Modules\Organization\app\Http\Repositories\BranchRepository;
+use Modules\AccessControl\app\Http\Repositories\RoleRepository;
 
-class BranchService
+class RoleService
 {
-    protected $branch_repository;
+    protected $role_repository;
 
-    public function __construct(BranchRepository $branch_repository)
+    public function __construct(RoleRepository $role_repository)
     {
-        $this->branch_repository = $branch_repository;
+        $this->role_repository = $role_repository;
     }
 
     public function getDataWithPagination(
@@ -26,10 +26,10 @@ class BranchService
         ?string $status = null
     ) {
         try {
-            $result = $this->branch_repository->getDataWithPagination(page: $page, perPage: $perPage, status: $status, searches: $searches, with: $with, conditions: $conditions);
+            $result = $this->role_repository->getDataWithPagination(page: $page, perPage: $perPage, status: $status, searches: $searches, with: $with, conditions: $conditions);
             return $result;
         } catch (Exception $e) {
-            logger()->error('Error : Failed to fetch branch data with pagination: ' . $e->getMessage());
+            logger()->error('Error : Failed to fetch role data with pagination: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -37,10 +37,10 @@ class BranchService
     public function find(int $id)
     {
         try {
-            $result = $this->branch_repository->find($id);
+            $result = $this->role_repository->find($id);
             return $result;
         } catch (Exception $e) {
-            logger()->error('Error : Failed to fetch branch: ' . $e->getMessage());
+            logger()->error('Error : Failed to fetch role: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -49,10 +49,10 @@ class BranchService
     {
         try {
             $attributes['created_by'] = auth()->user()->id;
-            $result = $this->branch_repository->create($attributes);
+            $result = $this->role_repository->create($attributes);
             return $result;
         } catch (Exception $e) {
-            logger()->error('Error : Failed to create branch: ' . $e->getMessage());
+            logger()->error('Error : Failed to create role: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -61,10 +61,10 @@ class BranchService
     {
         try {
             $attributes['updated_by'] = auth()->user()->id;
-            $result = $this->branch_repository->update($id, $attributes);
+            $result = $this->role_repository->update($id, $attributes);
             return $result;
         } catch (Exception $e) {
-            logger()->error('Error : Failed to update branch: ' . $e->getMessage());
+            logger()->error('Error : Failed to update role: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -72,29 +72,29 @@ class BranchService
     public function delete(int $id)
     {
         try {
-            $result = $this->branch_repository->delete($id);
+            $result = $this->role_repository->delete($id);
             return $result;
         } catch (Exception $e) {
-            logger()->error('Error : Failed to delete branch: ' . $e->getMessage());
+            logger()->error('Error : Failed to delete role: ' . $e->getMessage());
             throw $e;
         }
     }
 
-    public function toggleBranchStatus($data)
+    public function toggleRoleStatus($data)
     {
-        $this->branch_repository->toggleActive($data);
+        $this->role_repository->toggleActive($data);
     }
 
     public function whereFirst($column, $value)
     {
         try {
-            $result = $this->branch_repository->whereFirst($column, $value);
+            $result = $this->role_repository->whereFirst($column, $value);
             if (!$result) {
                 return null;
             }
             return $result;
         } catch (Exception $e) {
-            logger()->error('Error : Failed to find branch with whereFirst: ' . $e->getMessage());
+            logger()->error('Error : Failed to find role with whereFirst: ' . $e->getMessage());
             throw $e;
         }
     }

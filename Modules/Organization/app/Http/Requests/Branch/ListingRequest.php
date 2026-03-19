@@ -25,6 +25,7 @@ class ListingRequest extends FormRequest
             'page' => 'integer',
             'per_page' => 'integer',
             'search'=> 'string',
+            'status' => 'string|in:active,inactive'
         ];
     }
 
