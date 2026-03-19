@@ -13,81 +13,37 @@ class FeatureSeeder extends Seeder
     public function run(): void
     {
         $features = [
-
-            // Branch 
             [
-                'name' => 'View Branch',
-                'key' => 'view_branch',
+                'name' => 'Branch',
+                'key' => 'branch_feature',
                 'module' => 'Organization',
-                'description' => 'View branch list'
+                'description' => 'This is a feature of branch',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'name' => 'Create Branch',
-                'key' => 'create_branch',
+                'name' => 'Department',
+                'key' => 'department_feature',
                 'module' => 'Organization',
-                'description' => 'Create new branch'
+                'description' => 'This is a feature of department',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'name' => 'Update Branch',
-                'key' => 'update_branch',
-                'module' => 'Organization',
-                'description' => 'Update branch'
+                'name' => 'Role',
+                'key' => 'role_feature',
+                'module' => 'AccessControl',
+                'description' => 'This is a feature of role',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'name' => 'Delete Branch',
-                'key' => 'delete_branch',
-                'module' => 'Organization',
-                'description' => 'Delete branch'
-            ],
-            // Department 
-            [
-                'name' => 'View Department',
-                'key' => 'view_department',
-                'module' => 'Organization',
-                'description' => 'View department list'
-            ],
-            [
-                'name' => 'Create Department',
-                'key' => 'create_department',
-                'module' => 'Organization',
-                'description' => 'Create new department'
-            ],
-            [
-                'name' => 'Update Department',
-                'key' => 'update_department',
-                'module' => 'Organization',
-                'description' => 'Update department'
-            ],
-            [
-                'name' => 'Delete Department',
-                'key' => 'delete_department',
-                'module' => 'Organization',
-                'description' => 'Delete department'
-            ],
-            // Role 
-            [
-                'name' => 'View Role',
-                'key' => 'view_role',
-                'module' => 'Organization',
-                'description' => 'View role list'
-            ],
-            [
-                'name' => 'Create Role',
-                'key' => 'create_role',
-                'module' => 'Organization',
-                'description' => 'Create new role'
-            ],
-            [
-                'name' => 'Update Role',
-                'key' => 'update_role',
-                'module' => 'Organization',
-                'description' => 'Update role'
-            ],
-            [
-                'name' => 'Delete Role',
-                'key' => 'delete_role',
-                'module' => 'Organization',
-                'description' => 'Delete role'
+                'name' => 'Feature',
+                'key' => 'feature_feature',
+                'module' => 'AccessControl',
+                'description' => 'This is a feature of feature',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
         ];
 

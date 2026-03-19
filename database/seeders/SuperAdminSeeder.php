@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Modules\AccessControl\app\Models\Feature;
+use Modules\AccessControl\app\Models\Permission;
 use Modules\AccessControl\app\Models\Role;
 
 class SuperAdminSeeder extends Seeder
@@ -23,6 +24,7 @@ class SuperAdminSeeder extends Seeder
         ]);
 
         $features = Feature::pluck('id')->toArray();
+        $permissions = Permission::pluck('id')->toArray();
 
         $role->features()->sync($features);
 
@@ -37,6 +39,6 @@ class SuperAdminSeeder extends Seeder
             'status' => 'active'
         ]);
 
-        $user->features()->sync($features);
+        $user->permissions()->sync($permissions);
     }
 }

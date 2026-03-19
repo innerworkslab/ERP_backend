@@ -168,4 +168,39 @@ class RoleController extends Controller
             return $this->errorResponse('Something went wrong!', 500);
         }
     }
+
+    public function rolesWithoutPagination(ListingRequest $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), $request->rules(), $request->messages());
+            if ($validator->fails()) {
+                return $this->validationErrorResponse($validator);
+            }
+            $validated = $request->validated();
+            $per_page = array_key_exists('per_page', $validated) ? $validated['per_page'] : 20;
+            $page = array_key_exists('page', $validated) ? $validated['page'] : 1;
+            $searches = [];
+            $conditions = [];
+            $status = null;
+
+            if (!empty($validated['search'])) {
+                $search = $validated['search'];
+
+                $searches = [
+                    'name' => $search,
+                ];
+            }
+
+            if (!empty($validated['status'])) {
+                $conditions['status'] = $validated['status'];
+            }
+
+            $with = ['branch', 'department'];
+            $res_data = $this->role_service->getRolesWithoutPagination(status: $status, searches: $searches, with: $with, conditions: $conditions);
+            return $this->successResponse($res_data, 200, 'Role Lists Without Pagination');
+        } catch (\Exception $e) {
+            logger()->error($e);
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
 }

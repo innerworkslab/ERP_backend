@@ -13,7 +13,7 @@ class CheckFeaturePermission
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, $feature)
+    public function handle(Request $request, Closure $next, $permissionKey)
     {
 
         $user = auth()->user();
@@ -24,7 +24,7 @@ class CheckFeaturePermission
             ], 401);
         }
 
-        if (!$user->hasFeature($feature)) {
+        if (!$user->hasPermission($permissionKey)) {
             return response()->json([
                 'message' => 'Forbidden: permission denied'
             ], 403);

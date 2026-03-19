@@ -32,4 +32,40 @@ class RoleRepository extends BaseRepo
         }
         return $data;
     }
+
+    public function getRolesWithoutPagination(
+        $status,
+        $searches,
+        $with,
+        $conditions
+    ) {
+
+        $query = $this->model->newQuery();
+
+        if (!empty($with)) {
+            $query->with($with);
+        }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if (!empty($conditions)) {
+            foreach ($conditions as $field => $value) {
+                $query->where($field, $value);
+            }
+        }
+
+        if (!empty($searches)) {
+            $query->where(function ($q) use ($searches) {
+                foreach ($searches as $field => $value) {
+                    $q->orWhere($field, 'LIKE', "%{$value}%");
+                }
+            });
+        }
+
+        return $query
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
 }

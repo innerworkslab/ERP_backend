@@ -14,20 +14,25 @@ class Feature extends Model
     protected $fillable = [
         'name',
         'module',
+        'key',
         'description'
     ];
 
     public function roles()
     {
         return $this->belongsToMany(
-            Role::class
+            Role::class,
+            'feature_role',
+            'feature_id',
+            'role_id'
         );
     }
 
-    public function users()
+    public function permissions()
     {
-        return $this->belongsToMany(
-            User::class,
+        return $this->hasMany(
+            Permission::class,
+            'feature_id'
         );
     }
 }
