@@ -34,10 +34,6 @@ return new class extends Migration {
                 ->constrained()
                 ->nullOnDelete();
 
-            $table->decimal('salary', 12, 2)->nullable();
-
-            $table->decimal('sale_incentive', 12, 2)->nullable();
-
             $table->enum('status', ['active', 'inactive']);
 
             $table->timestamps();
