@@ -3,9 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Modules\AccessControl\app\Models\Feature;
 use Modules\AccessControl\app\Models\Role;
 
@@ -32,12 +30,10 @@ class SuperAdminSeeder extends Seeder
             'name' => 'Super Admin',
             'phone_number' => '09123456789',
             'email'=> 'superadmin@example.com',
-            'password' => Hash::make('password123'),
+            'password' => 'password123',
             'role_id' => $role->id,
             'branch_id' => null,
             'department_id' => null,
-            'salary' => null,
-            'sale_incentive' => null,
             'status' => 'active'
         ]);
 

@@ -2,5 +2,6 @@
     "Authentication": true,
     "Organization": true,
     "AccessControl": true,
-    "Stakeholder": true
+    "Stakeholder": true,
+    "Staff": true
 }

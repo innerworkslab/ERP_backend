@@ -8,10 +8,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Modules\AccessControl\app\Models\Feature;
-use Modules\AccessControl\app\Models\Role;
-use Modules\Organization\app\Models\Branch;
-use Modules\Organization\app\Models\Department;
+use Modules\AccessControl\App\Models\Feature;
+use Modules\AccessControl\App\Models\Role;
+use Modules\Organization\App\Models\Branch;
+use Modules\Organization\App\Models\Department;
+use Modules\Staff\app\Models\StaffBankingInformation;
+use Modules\Staff\app\Models\StaffEmploymentInformation;
+use Modules\Staff\app\Models\StaffPersonalInformation;
 
 class User extends Authenticatable
 {
@@ -31,8 +34,6 @@ class User extends Authenticatable
         'role_id',
         'branch_id',
         'department_id',
-        'salary',
-        'sale_incentive',
         'status'
     ];
 
@@ -112,4 +113,20 @@ class User extends Authenticatable
 
         return $userFeature;
     }
+
+    public function staffPersonalInformation()
+    {
+        return $this->hasOne(StaffPersonalInformation::class);
+    }
+
+    public function staffEmploymentInformation()
+    {
+        return $this->hasOne(StaffEmploymentInformation::class);
+    }
+
+    public function staffBankingInformation()
+    {
+        return $this->hasOne(StaffBankingInformation::class);
+    }
+    
 }
