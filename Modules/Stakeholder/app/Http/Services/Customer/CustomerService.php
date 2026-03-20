@@ -12,6 +12,7 @@ class CustomerService
 {
     private const PREFIX = 'CUS';
     private const RUNNING_NUMBER_LENGTH = 6;
+    private const RELATIONS = ['branch', 'created_by', 'updated_by'];
 
     public function __construct(private CustomerRepository $customerRepository)
     {
@@ -19,7 +20,7 @@ class CustomerService
 
     public function list(array $filters): array
     {
-        $query = Customer::query()->latest();
+        $query = Customer::query()->with(self::RELATIONS)->latest();
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -53,10 +54,14 @@ class CustomerService
     public function create(array $attributes): Customer
     {
         return DB::transaction(function () use ($attributes) {
+            $userId = auth()->id();
             $branchId = (int) ($attributes['branch_id'] ?? 0);
             $runningNumber = $this->getNextRunningNumber($branchId);
 
+            unset($attributes['created_by'], $attributes['updated_by']);
+
             $attributes['code'] = 'TMP-CUS-' . uniqid();
+            $attributes['created_by'] = $userId;
 
             $customer = $this->customerRepository->create($attributes);
 
@@ -64,7 +69,7 @@ class CustomerService
                 'code' => $this->generateCode($customer->id, $branchId, $runningNumber),
             ]);
 
-            return $customer->fresh();
+            return $customer->fresh()->loadMissing(self::RELATIONS);
         });
     }
 
@@ -76,7 +81,7 @@ class CustomerService
             throw new ModelNotFoundException('Customer not found.');
         }
 
-        return $model;
+        return $model->loadMissing(self::RELATIONS);
     }
 
     public function update(int $id, array $attributes): ?Customer
@@ -85,8 +90,13 @@ class CustomerService
             return null;
         }
 
-        unset($attributes['code']);
-        return $this->customerRepository->update($id, $attributes);
+        unset($attributes['code'], $attributes['created_by'], $attributes['updated_by']);
+
+        $attributes['updated_by'] = auth()->id();
+
+        $customer = $this->customerRepository->update($id, $attributes);
+
+        return $customer?->loadMissing(self::RELATIONS);
     }
 
     public function delete(int $id): bool

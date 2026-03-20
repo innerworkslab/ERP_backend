@@ -2,6 +2,7 @@
 
 namespace Modules\Stakeholder\app\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Organization\app\Models\Branch;
 
@@ -40,5 +41,15 @@ class Supplier extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function created_by()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updated_by()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

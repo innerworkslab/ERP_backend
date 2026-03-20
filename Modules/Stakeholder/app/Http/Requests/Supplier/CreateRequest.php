@@ -30,8 +30,6 @@ class CreateRequest extends FormRequest
             'payment_terms' => ['nullable', 'string', 'max:100'],
             'payment_due' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:Active,Inactive'],
-            'created_by' => ['nullable', 'integer'],
-            'updated_by' => ['nullable', 'integer'],
         ];
     }
 }

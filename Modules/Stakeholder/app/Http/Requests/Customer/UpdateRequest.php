@@ -30,8 +30,6 @@ class UpdateRequest extends FormRequest
             'payment_terms' => ['sometimes', 'nullable', 'string', 'max:100'],
             'payment_due' => ['sometimes', 'nullable', 'string', 'max:100'],
             'status' => ['sometimes', 'nullable', 'in:Active,Inactive'],
-            'created_by' => ['sometimes', 'nullable', 'integer'],
-            'updated_by' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 }
