@@ -47,6 +47,12 @@ class UpdateRequest extends FormRequest
             'banking_information' => 'nullable|array',
             'banking_information.bank_name' => 'nullable|string|max:100',
             'banking_information.account_number' => 'nullable|string|max:100',
+
+            'authorized_features' => 'nullable|array',
+            'authorized_features.*.feature_id' => 'required_with:authorized_features|integer|exists:features,id|distinct',
+            'authorized_features.*.recommended_by_rule' => 'nullable|string|max:255',
+            'authorized_features.*.access_type' => 'nullable|string|max:100',
+            'authorized_features.*.permission_level' => 'nullable|string|max:100',
         ];
     }
 

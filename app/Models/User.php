@@ -11,8 +11,8 @@ use Laravel\Sanctum\HasApiTokens;
 
 use Modules\Staff\app\Models\StaffBankingInformation;
 use Modules\Staff\app\Models\StaffEmploymentInformation;
+use Modules\Staff\app\Models\StaffAuthorizedFeature;
 use Modules\Staff\app\Models\StaffPersonalInformation;
-use Modules\AccessControl\app\Models\Feature;
 use Modules\AccessControl\app\Models\Role;
 use Modules\AccessControl\app\Models\Permission;
 use Modules\Organization\app\Models\Branch;
@@ -129,6 +129,11 @@ class User extends Authenticatable
     public function staffBankingInformation()
     {
         return $this->hasOne(StaffBankingInformation::class);
+    }
+
+    public function staffAuthorizedFeatures()
+    {
+        return $this->hasMany(StaffAuthorizedFeature::class, 'staff_id');
     }
     
 }

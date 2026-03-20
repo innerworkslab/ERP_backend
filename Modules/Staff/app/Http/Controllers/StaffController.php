@@ -61,6 +61,9 @@ class StaffController extends Controller
                 'staffPersonalInformation',
                 'staffEmploymentInformation',
                 'staffBankingInformation',
+                'staffAuthorizedFeatures',
+                'staffAuthorizedFeatures.feature',
+                'staffAuthorizedFeatures.assignedBy',
             ];
 
             $res_data = $this->staff_service->getDataWithPagination($per_page, $page, status: $status, searches: $searches, with: $with);

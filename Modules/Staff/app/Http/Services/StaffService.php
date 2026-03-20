@@ -10,8 +10,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Modules\Staff\app\Http\Repositories\StaffRepository;
+use Modules\Staff\app\Models\StaffAuthorizedFeature;
 use Modules\Staff\app\Models\StaffBankingInformation;
 use Modules\Staff\app\Models\StaffEmploymentInformation;
+use Modules\Staff\app\Models\StaffFeatureRecommendationRule;
 use Modules\Staff\app\Models\StaffPersonalInformation;
 
 class StaffService
@@ -70,8 +72,16 @@ class StaffService
             $personalInformation = $this->preparePersonalInformationImages($personalInformation);
             $employmentInformation = Arr::pull($attributes, 'employment_information', []);
             $bankingInformation = Arr::pull($attributes, 'banking_information', []);
+            $authorizedFeatures = Arr::pull($attributes, 'authorized_features', []);
 
             $staff = $this->staff_repository->create($attributes);
+
+            $this->syncAuthorizedFeatures(
+                $staff->id,
+                (int) $staff->role_id,
+                $staff->department_id ? (int) $staff->department_id : null,
+                $authorizedFeatures
+            );
 
             $personalInformation['user_id'] = $staff->id;
             StaffPersonalInformation::updateOrCreate(
@@ -141,10 +151,21 @@ class StaffService
 
             $employmentInformation = Arr::pull($attributes, 'employment_information', []);
             $bankingInformation = Arr::pull($attributes, 'banking_information', []);
+            $authorizedFeatures = Arr::pull($attributes, 'authorized_features', []);
 
             unset($attributes['password']);
 
             $this->staff_repository->update($id, $attributes);
+
+            $roleId = (int) ($attributes['role_id'] ?? $staff->role_id);
+            $departmentId = $attributes['department_id'] ?? $staff->department_id;
+
+            $this->syncAuthorizedFeatures(
+                $id,
+                $roleId,
+                $departmentId ? (int) $departmentId : null,
+                $authorizedFeatures
+            );
 
             $personalInformation['user_id'] = $id;
             StaffPersonalInformation::updateOrCreate(
@@ -318,6 +339,88 @@ class StaffService
             } catch (Exception $e) {
                 logger()->error('Error : Failed to delete file: ' . $path . ' - ' . $e->getMessage());
             }
+        }
+    }
+
+    private function syncAuthorizedFeatures(int $staffId, int $roleId, ?int $departmentId = null, array $manualAuthorizedFeatures = []): void
+    {
+        $roleFeatureIds = DB::table('feature_role')
+            ->where('role_id', $roleId)
+            ->pluck('feature_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->toArray();
+
+        $ruleQuery = StaffFeatureRecommendationRule::query()
+            ->where('role_id', $roleId)
+            ->where('status', 'active')
+            ->where('is_default_recommended', true);
+
+        if ($departmentId) {
+            $ruleQuery->where('department_id', $departmentId);
+        }
+
+        $recommendationRules = $ruleQuery->get(['id', 'feature_id']);
+
+        $recommendedFeatureIds = $recommendationRules
+            ->pluck('feature_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->toArray();
+
+        $ruleByFeature = [];
+        foreach ($recommendationRules as $rule) {
+            $ruleByFeature[(int) $rule->feature_id] = (string) $rule->id;
+        }
+
+        $manualMap = [];
+        foreach ($manualAuthorizedFeatures as $item) {
+            if (!is_array($item) || !array_key_exists('feature_id', $item)) {
+                continue;
+            }
+
+            $manualMap[(int) $item['feature_id']] = $item;
+        }
+
+        $manualFeatureIds = array_keys($manualMap);
+
+        $featureIds = array_values(array_unique(array_merge($roleFeatureIds, $recommendedFeatureIds, $manualFeatureIds)));
+
+        StaffAuthorizedFeature::where('staff_id', $staffId)->delete();
+
+        foreach ($featureIds as $featureId) {
+            $isRoleFeature = in_array($featureId, $roleFeatureIds);
+            $manual = $manualMap[$featureId] ?? null;
+
+            $isRecommended = !array_key_exists($featureId, $manualMap);
+            $recommendedByRule = $isRoleFeature ? null : ($ruleByFeature[$featureId] ?? null);
+            $accessType = $isRoleFeature ? 'role_auto' : 'recommended';
+            $permissionLevel = $isRoleFeature ? 'full' : 'limited';
+
+            if ($manual) {
+                if (array_key_exists('recommended_by_rule', $manual)) {
+                    $recommendedByRule = $manual['recommended_by_rule'];
+                }
+
+                if (!empty($manual['access_type'])) {
+                    $accessType = $manual['access_type'];
+                }
+
+                if (!empty($manual['permission_level'])) {
+                    $permissionLevel = $manual['permission_level'];
+                }
+            }
+
+            StaffAuthorizedFeature::create([
+                'staff_id' => $staffId,
+                'feature_id' => $featureId,
+                'is_recommended' => $isRecommended,
+                'recommended_by_rule' => $recommendedByRule,
+                'access_type' => $accessType,
+                'permission_level' => $permissionLevel,
+                'assigned_by' => auth()->id(),
+                'assigned_date' => now(),
+            ]);
         }
     }
 }   

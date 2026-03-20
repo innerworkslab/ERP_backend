@@ -22,6 +22,9 @@ class StaffRepository extends BaseRepo
                 'staffPersonalInformation',
                 'staffEmploymentInformation',
                 'staffBankingInformation',
+                'staffAuthorizedFeatures',
+                'staffAuthorizedFeatures.feature',
+                'staffAuthorizedFeatures.assignedBy',
             ])
             ->find($id);
     }
