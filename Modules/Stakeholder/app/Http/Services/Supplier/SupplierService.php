@@ -12,6 +12,7 @@ class SupplierService
 {
     private const PREFIX = 'SUP';
     private const RUNNING_NUMBER_LENGTH = 6;
+    private const RELATIONS = ['branch', 'created_by', 'updated_by'];
 
     public function __construct(private SupplierRepository $supplierRepository)
     {
@@ -19,7 +20,7 @@ class SupplierService
 
     public function list(array $filters): array
     {
-        $query = Supplier::query()->latest();
+        $query = Supplier::query()->with(self::RELATIONS)->latest();
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -53,10 +54,14 @@ class SupplierService
     public function create(array $attributes): Supplier
     {
         return DB::transaction(function () use ($attributes) {
+            $userId = auth()->id();
             $branchId = (int) ($attributes['branch_id'] ?? 0);
             $runningNumber = $this->getNextRunningNumber($branchId);
 
+            unset($attributes['created_by'], $attributes['updated_by']);
+
             $attributes['code'] = 'TMP-SUP-' . uniqid();
+            $attributes['created_by'] = $userId;
 
             $supplier = $this->supplierRepository->create($attributes);
 
@@ -64,7 +69,7 @@ class SupplierService
                 'code' => $this->generateCode($supplier->id, $branchId, $runningNumber),
             ]);
 
-            return $supplier->fresh();
+            return $supplier->fresh()->loadMissing(self::RELATIONS);
         });
     }
 
@@ -76,7 +81,7 @@ class SupplierService
             throw new ModelNotFoundException('Supplier not found.');
         }
 
-        return $model;
+        return $model->loadMissing(self::RELATIONS);
     }
 
     public function update(int $id, array $attributes): ?Supplier
@@ -85,8 +90,13 @@ class SupplierService
             return null;
         }
 
-        unset($attributes['code']);
-        return $this->supplierRepository->update($id, $attributes);
+        unset($attributes['code'], $attributes['created_by'], $attributes['updated_by']);
+
+        $attributes['updated_by'] = auth()->id();
+
+        $supplier = $this->supplierRepository->update($id, $attributes);
+
+        return $supplier?->loadMissing(self::RELATIONS);
     }
 
     public function delete(int $id): bool
