@@ -116,6 +116,7 @@ class FeatureRepository extends BaseRepo
                 'roles.department',
                 'permissions',
             ]);
+            $data->role_ids = $data->roles->pluck('id')->toArray();
         }
         return $data;
     }
