@@ -1,0 +1,15 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Modules\PriceGroup\app\Http\Controllers\PriceGroupController;
+
+Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
+    Route::prefix('price-groups')->group(function () {
+        Route::get('/', [PriceGroupController::class, 'index'])->middleware('permission:view_price_group');
+        Route::post('/', [PriceGroupController::class, 'store'])->middleware('permission:create_price_group');
+        Route::get('/{id}', [PriceGroupController::class, 'show'])->middleware('permission:view_price_group');
+        Route::put('/{id}', [PriceGroupController::class, 'update'])->middleware('permission:update_price_group');
+        Route::delete('/{id}', [PriceGroupController::class, 'destroy'])->middleware('permission:delete_price_group');
+        Route::patch('/{id}/toggle-status', [PriceGroupController::class, 'toggleActive'])->middleware('permission:update_price_group');
+    });
+});

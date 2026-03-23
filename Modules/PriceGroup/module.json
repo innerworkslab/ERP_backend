@@ -1,0 +1,11 @@
+{
+    "name": "PriceGroup",
+    "alias": "pricegroup",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\PriceGroup\\app\\Providers\\PriceGroupServiceProvider"
+    ],
+    "files": []
+}
