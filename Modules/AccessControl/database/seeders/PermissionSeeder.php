@@ -75,6 +75,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Update Feature Recommendation Rule', 'key' => 'update_feature_recommendation_rule'],
                 ['name' => 'Delete Feature Recommendation Rule', 'key' => 'delete_feature_recommendation_rule'],
             ],
+
+            // Price Group
+            'price_group_feature' => [
+                ['name' => 'View Price Group', 'key' => 'view_price_group'],
+                ['name' => 'Create Price Group', 'key' => 'create_price_group'],
+                ['name' => 'Update Price Group', 'key' => 'update_price_group'],
+                ['name' => 'Delete Price Group', 'key' => 'delete_price_group'],
+            ],
         ];
 
         foreach ($permissions as $key => $perms) {

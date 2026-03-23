@@ -3,5 +3,6 @@
     "Organization": true,
     "AccessControl": true,
     "Stakeholder": true,
-    "Staff": true
+    "Staff": true,
+    "PriceGroup": true
 }
