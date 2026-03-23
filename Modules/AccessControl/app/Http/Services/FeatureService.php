@@ -81,4 +81,26 @@ class FeatureService
             throw $e;
         }
     }
+
+    public function recommendedFeatures($roleId)
+    {
+        try {
+            $result = $this->feature_repository->recommendedFeatures($roleId);
+            return $result;
+        } catch (Exception $e) {
+            logger()->error('Error : Failed to fetch recommended features: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function otherFeatures($roleId)
+    {
+        try {
+            $result = $this->feature_repository->otherFeatures($roleId);
+            return $result;
+        } catch (Exception $e) {
+            logger()->error('Error : Failed to fetch another features: ' . $e->getMessage());
+            throw $e;
+        }
+    }
 }

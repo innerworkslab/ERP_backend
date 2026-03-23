@@ -140,4 +140,32 @@ class FeatureController extends Controller
             return $this->errorResponse('Something went wrong!', 500);
         }
     }
+
+    public function recommendedFeatures($roleId)
+    {
+        try {
+            if (!is_numeric($roleId)) {
+                return $this->errorResponse('Role ID must be an integer!', 422);
+            }
+            $data = $this->feature_service->recommendedFeatures($roleId);
+            return $this->successResponse($data, 200, 'Recommended features for the role');
+        } catch (\Exception $e) {
+            logger()->error($e);
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
+
+    public function otherFeatures($roleId)
+    {
+        try {
+            if (!is_numeric($roleId)) {
+                return $this->errorResponse('Role ID must be an integer!', 422);
+            }
+            $data = $this->feature_service->otherFeatures($roleId);
+            return $this->successResponse($data, 200, 'Another features for the role');
+        } catch (\Exception $e) {
+            logger()->error($e);
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
 }

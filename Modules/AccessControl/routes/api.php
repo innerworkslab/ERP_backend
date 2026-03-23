@@ -19,5 +19,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/all', [FeatureController::class, 'index'])->middleware('permission:view_feature');
         Route::post('/assign-roles', [FeatureController::class, 'assignRoles'])->middleware('permission:assign_role_to_feature');
         Route::get('{id}', [FeatureController::class, 'findOrFail'])->middleware('permission:view_feature');
+        Route::get('{roleId}/recommended-features', [FeatureController::class, 'recommendedFeatures'])->middleware('permission:view_feature');
+        Route::get('{roleId}/other-features', [FeatureController::class, 'otherFeatures'])->middleware('permission:view_feature');
+
     });
 });
