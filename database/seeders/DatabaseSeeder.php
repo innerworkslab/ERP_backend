@@ -8,6 +8,7 @@ use Illuminate\Database\Seeder;
 use Modules\AccessControl\app\Models\Permission;
 use Modules\AccessControl\database\seeders\FeatureSeeder;
 use Modules\AccessControl\database\seeders\PermissionSeeder;
+use Modules\Stakeholder\database\seeders\StakeholderDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -27,6 +28,7 @@ class DatabaseSeeder extends Seeder
             FeatureSeeder::class,
             PermissionSeeder::class,
             SuperAdminSeeder::class,
+            StakeholderDatabaseSeeder::class,
         ]);
     }
 }

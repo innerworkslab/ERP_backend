@@ -25,7 +25,7 @@ return new class extends Migration
             $table->unsignedBigInteger('branch_id')->nullable();
             $table->decimal('credit_limit', 18, 2)->default(0);
             $table->decimal('opening', 18, 2)->default(0);
-            $table->enum('type', ['Retail', 'Wholesale'])->default('Retail');
+            $table->unsignedBigInteger('customer_type_id');
             $table->date('birthday')->nullable();
             $table->string('payment_terms', 100)->nullable();
             $table->string('payment_due', 100)->nullable();
