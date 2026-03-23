@@ -16,7 +16,7 @@ class AuthenticationRepository extends BaseRepo
 
     public function generateAccessToken(User $user)
     {
-        $user->tokens()->delete();
+        // $user->tokens()->delete();
         return $user->createToken($user->email . '_AccessToken', [''], now()->addDays(2))->plainTextToken;
     }
 

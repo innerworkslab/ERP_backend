@@ -46,10 +46,10 @@ class AuthenticationService
 
             $currentAccessToken->delete();
 
-            auth()->user()->tokens()->where(
-                'id',
-                $currentAccessToken->id
-            )->delete();
+            // auth()->user()->tokens()->where(
+            //     'id',
+            //     $currentAccessToken->id
+            // )->delete();
             return true;
         } catch (Exception $e) {
             logger()->error('Error : Failed to user logout: ' . $e->getMessage());
