@@ -127,4 +127,31 @@ class FeatureRepository extends BaseRepo
         $roles = $data['role_ids'];
         $feature->roles()->sync($roles);
     }
+
+    public function recommendedFeatures($roleId)
+    {
+        $role = Role::find($roleId);
+        if (!$role) {
+            return [];
+        }
+
+        $assignedFeatureIds = $role->features()->pluck('features.id')->toArray();
+
+        $recommendedFeatures = Feature::whereIn('id', $assignedFeatureIds)->where('status', 'active')->with('permissions')->get();
+        return $recommendedFeatures;
+    }
+
+    public function otherFeatures($roleId)
+    {
+        $role = Role::find($roleId);
+        if (!$role) {
+            return [];
+        }
+
+        $assignedFeatureIds = $role->features()->pluck('features.id')->toArray();
+
+        $anotherFeatures = Feature::whereNotIn('id', $assignedFeatureIds)->where('status', 'active')->with('permissions')->get();
+        return $anotherFeatures;
+    }
+
 }
