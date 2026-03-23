@@ -1,0 +1,38 @@
+<?php
+
+namespace Modules\Inventory\app\Http\Requests\UOMConversion;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class ListingRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'page' => 'integer',
+            'per_page' => 'integer',
+            'base_unit_id' => 'integer|exists:unit_of_measurements,id',
+            'conversion_unit_id' => 'integer|exists:unit_of_measurements,id',
+            'status' => 'string|in:active,inactive'
+        ];
+    }
+
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    {
+        $errors = $validator->errors();
+        return $errors;
+    }
+}

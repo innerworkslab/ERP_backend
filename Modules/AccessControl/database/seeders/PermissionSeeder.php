@@ -48,7 +48,7 @@ class PermissionSeeder extends Seeder
             // User
             'user_feature' => [
                 ['name' => 'View User', 'key' => 'view_user'],
-                ['name' => 'Create User', 'key' => 'create_user'],  
+                ['name' => 'Create User', 'key' => 'create_user'],
                 ['name' => 'Update User', 'key' => 'update_user'],
                 ['name' => 'Delete User', 'key' => 'delete_user'],
                 ['name' => 'Assign Role To User', 'key' => 'assign_role_to_user'],
@@ -82,6 +82,30 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Create Price Group', 'key' => 'create_price_group'],
                 ['name' => 'Update Price Group', 'key' => 'update_price_group'],
                 ['name' => 'Delete Price Group', 'key' => 'delete_price_group'],
+            ],
+
+            // Variation
+            'variation_feature' => [
+                ['name' => 'View Variation', 'key' => 'view_variation'],
+                ['name' => 'Create Variation', 'key' => 'create_variation'],
+                ['name' => 'Update Variation', 'key' => 'update_variation'],
+                ['name' => 'Delete Variation', 'key' => 'delete_variation'],
+            ],
+
+            // UOM
+            'uom_feature' => [
+                ['name' => 'View UOM', 'key' => 'view_uom'],
+                ['name' => 'Create UOM', 'key' => 'create_uom'],
+                ['name' => 'Update UOM', 'key' => 'update_uom'],
+                ['name' => 'Delete UOM', 'key' => 'delete_uom'],
+            ],
+
+            // UOM Conversion
+            'uom_conversion_feature' => [
+                ['name' => 'View UOM Conversion', 'key' => 'view_uom_conversion'],
+                ['name' => 'Create UOM Conversion', 'key' => 'create_uom_conversion'],
+                ['name' => 'Update UOM Conversion', 'key' => 'update_uom_conversion'],
+                ['name' => 'Delete UOM Conversion', 'key' => 'delete_uom_conversion'],
             ],
         ];
 

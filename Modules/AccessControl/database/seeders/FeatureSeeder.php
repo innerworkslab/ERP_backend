@@ -83,6 +83,30 @@ class FeatureSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'Variation',
+                'key' => 'variation_feature',
+                'module' => 'Product',
+                'description' => 'This is a feature of variation',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'UOM',
+                'key' => 'uom_feature',
+                'module' => 'Inventory',
+                'description' => 'This is a feature of uom',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'UOM Conversion',
+                'key' => 'uom_conversion_feature',
+                'module' => 'Inventory',
+                'description' => 'This is a feature of uom conversion',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         foreach ($features as $feature) {
