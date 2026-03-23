@@ -5,6 +5,7 @@ namespace Modules\Stakeholder\app\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Organization\app\Models\Branch;
+use Modules\Stakeholder\app\Models\CustomerType;
 
 class Customer extends Model
 {
@@ -23,7 +24,7 @@ class Customer extends Model
         'branch_id',
         'credit_limit',
         'opening',
-        'type',
+        'customer_type_id',
         'birthday',
         'payment_terms',
         'payment_due',
@@ -37,6 +38,11 @@ class Customer extends Model
         'opening' => 'decimal:2',
         'birthday' => 'date',
     ];
+
+    public function customer_type()
+    {
+        return $this->belongsTo(CustomerType::class);
+    }
 
     public function branch()
     {

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Stakeholder\app\Http\Controllers\Customer\CustomerController;
+use Modules\Stakeholder\app\Http\Controllers\CustomerType\CustomerTypeController;
 use Modules\Stakeholder\app\Http\Controllers\Supplier\SupplierController;
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
@@ -12,6 +13,12 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
         Route::get('/{id}', [CustomerController::class, 'show'])->middleware('permission:view_customer');
         Route::put('/{id}', [CustomerController::class, 'update'])->middleware('permission:update_customer');
         Route::delete('/{id}', [CustomerController::class, 'destroy'])->middleware('permission:delete_customer');
+    });
+
+    //Customer Type Routes
+    Route::prefix('customer-types')->group(function () {
+        Route::get('/', [CustomerTypeController::class, 'index'])->middleware('permission:view_customer');
+        Route::post('/', [CustomerTypeController::class, 'store'])->middleware('permission:create_customer');
     });
 
     //Supplier Routes

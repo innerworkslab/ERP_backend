@@ -25,7 +25,7 @@ class UpdateRequest extends FormRequest
             'branch_id' => ['sometimes', 'nullable', 'integer'],
             'credit_limit' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'opening' => ['sometimes', 'nullable', 'numeric'],
-            'type' => ['sometimes', 'nullable', 'in:Retail,Wholesale'],
+            'customer_type_id' => ['sometimes', 'required', 'integer', 'exists:customer_types,id'],
             'birthday' => ['sometimes', 'nullable', 'date'],
             'payment_terms' => ['sometimes', 'nullable', 'string', 'max:100'],
             'payment_due' => ['sometimes', 'nullable', 'string', 'max:100'],

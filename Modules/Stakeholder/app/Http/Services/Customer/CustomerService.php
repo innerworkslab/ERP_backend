@@ -12,7 +12,7 @@ class CustomerService
 {
     private const PREFIX = 'CUS';
     private const RUNNING_NUMBER_LENGTH = 6;
-    private const RELATIONS = ['branch', 'created_by', 'updated_by'];
+    private const RELATIONS = ['customer_type', 'branch', 'created_by', 'updated_by'];
 
     public function __construct(private CustomerRepository $customerRepository)
     {

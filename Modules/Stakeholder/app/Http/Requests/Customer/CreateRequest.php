@@ -25,7 +25,7 @@ class CreateRequest extends FormRequest
             'branch_id' => ['nullable', 'integer'],
             'credit_limit' => ['nullable', 'numeric', 'min:0'],
             'opening' => ['nullable', 'numeric'],
-            'type' => ['nullable', 'in:Retail,Wholesale'],
+            'customer_type_id' => ['required', 'integer', 'exists:customer_types,id'],
             'birthday' => ['nullable', 'date'],
             'payment_terms' => ['nullable', 'string', 'max:100'],
             'payment_due' => ['nullable', 'string', 'max:100'],
