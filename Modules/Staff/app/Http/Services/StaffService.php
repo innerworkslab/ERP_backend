@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Modules\AccessControl\app\Models\Feature;
+use Modules\AccessControl\app\Models\Permission;
 use Modules\Staff\app\Http\Repositories\StaffRepository;
 use Modules\Staff\app\Models\StaffAuthorizedFeature;
 use Modules\Staff\app\Models\StaffBankingInformation;
@@ -73,8 +75,17 @@ class StaffService
             $employmentInformation = Arr::pull($attributes, 'employment_information', []);
             $bankingInformation = Arr::pull($attributes, 'banking_information', []);
             $authorizedFeatures = Arr::pull($attributes, 'authorized_features', []);
+            $manualPermissionIds = Arr::pull($attributes, 'permission_ids', []);
 
             $staff = $this->staff_repository->create($attributes);
+
+            $this->syncUserPermissions(
+                staffId: (int) $staff->id,
+                oldRoleId: null,
+                newRoleId: (int) $staff->role_id,
+                manualPermissionIds: $manualPermissionIds,
+                manualProvided: true
+            );
 
             $this->syncAuthorizedFeatures(
                 $staff->id,
@@ -152,13 +163,24 @@ class StaffService
             $employmentInformation = Arr::pull($attributes, 'employment_information', []);
             $bankingInformation = Arr::pull($attributes, 'banking_information', []);
             $authorizedFeatures = Arr::pull($attributes, 'authorized_features', []);
+            $manualPermissionsProvided = array_key_exists('permission_ids', $attributes);
+            $manualPermissionIds = Arr::pull($attributes, 'permission_ids', []);
 
             unset($attributes['password']);
 
             $this->staff_repository->update($id, $attributes);
 
+            $oldRoleId = (int) $staff->role_id;
             $roleId = (int) ($attributes['role_id'] ?? $staff->role_id);
             $departmentId = $attributes['department_id'] ?? $staff->department_id;
+
+            $this->syncUserPermissions(
+                staffId: $id,
+                oldRoleId: $oldRoleId,
+                newRoleId: $roleId,
+                manualPermissionIds: $manualPermissionIds,
+                manualProvided: $manualPermissionsProvided
+            );
 
             $this->syncAuthorizedFeatures(
                 $id,
@@ -269,6 +291,182 @@ class StaffService
     public function toggleStaffStatus($staff): void
     {
         $this->staff_repository->toggleActive($staff);
+    }
+
+    public function getFeatureSuggestions(int $roleId, int $departmentId): array
+    {
+        $roleFeatureIds = DB::table('feature_role')
+            ->where('role_id', $roleId)
+            ->pluck('feature_id')
+            ->map(fn($id) => (int) $id)
+            ->values()
+            ->toArray();
+
+        $rules = StaffFeatureRecommendationRule::query()
+            ->where('role_id', $roleId)
+            ->where('department_id', $departmentId)
+            ->where('status', 'active')
+            ->with(['feature:id,name,key,module,status'])
+            ->get(['id', 'feature_id', 'is_default_recommended']);
+
+        $ruleByFeature = [];
+        $recommendedFeatureIds = [];
+        foreach ($rules as $rule) {
+            $featureId = (int) $rule->feature_id;
+            $ruleByFeature[$featureId] = [
+                'rule_id' => (string) $rule->id,
+                'is_default_recommended' => (bool) $rule->is_default_recommended,
+            ];
+
+            if ((bool) $rule->is_default_recommended) {
+                $recommendedFeatureIds[] = $featureId;
+            }
+        }
+
+        $featureIds = array_values(array_unique(array_merge($roleFeatureIds, $recommendedFeatureIds)));
+
+        $features = Feature::query()
+            ->whereIn('id', $featureIds)
+            ->where('status', 'active')
+            ->get(['id', 'name', 'key', 'module'])
+            ->keyBy('id');
+
+        $permissionRows = Permission::query()
+            ->whereIn('feature_id', $featureIds)
+            ->where('status', 'active')
+            ->get(['id', 'feature_id', 'name', 'key']);
+
+        $permissionsByFeature = [];
+        foreach ($permissionRows as $permission) {
+            $permissionsByFeature[(int) $permission->feature_id][] = [
+                'id' => (int) $permission->id,
+                'name' => $permission->name,
+                'key' => $permission->key,
+            ];
+        }
+
+        $rolePermissionIds = DB::table('feature_role as fr')
+            ->join('permissions as p', 'p.feature_id', '=', 'fr.feature_id')
+            ->join('features as f', 'f.id', '=', 'p.feature_id')
+            ->where('fr.role_id', $roleId)
+            ->where('p.status', 'active')
+            ->where('f.status', 'active')
+            ->pluck('p.id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->toArray();
+
+        $items = [];
+        $payload = [];
+
+        foreach ($featureIds as $featureId) {
+            $feature = $features->get($featureId);
+            if (!$feature) {
+                continue;
+            }
+
+            $isRoleFeature = in_array($featureId, $roleFeatureIds);
+            $ruleMeta = $ruleByFeature[$featureId] ?? null;
+
+            $recommendedByRule = $isRoleFeature ? null : ($ruleMeta['rule_id'] ?? null);
+            $accessType = $isRoleFeature ? 'role_auto' : 'recommended';
+            $permissionLevel = $isRoleFeature ? 'full' : 'limited';
+
+            $items[] = [
+                'feature_id' => $feature->id,
+                'feature_name' => $feature->name,
+                'feature_key' => $feature->key,
+                'module' => $feature->module,
+                'permissions' => $permissionsByFeature[$featureId] ?? [],
+                'is_role_feature' => $isRoleFeature,
+                'is_recommended' => !$isRoleFeature,
+                'recommended_by_rule' => $recommendedByRule,
+                'access_type' => $accessType,
+                'permission_level' => $permissionLevel,
+            ];
+
+            $payload[] = [
+                'feature_id' => $feature->id,
+                'recommended_by_rule' => $recommendedByRule,
+                'access_type' => $accessType,
+                'permission_level' => $permissionLevel,
+            ];
+        }
+
+        return [
+            'role_id' => $roleId,
+            'department_id' => $departmentId,
+            'role_permission_ids' => $rolePermissionIds,
+            'features' => $items,
+            'authorized_features_payload' => $payload,
+        ];
+    }
+
+    private function syncUserPermissions(
+        int $staffId,
+        ?int $oldRoleId,
+        int $newRoleId,
+        array $manualPermissionIds = [],
+        bool $manualProvided = true
+    ): void {
+        $newRolePermissionIds = $this->getRolePermissionIds($newRoleId);
+
+        $existingPermissionIds = DB::table('user_permission')
+            ->where('user_id', $staffId)
+            ->pluck('permission_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->toArray();
+
+        $oldRolePermissionIds = $oldRoleId ? $this->getRolePermissionIds($oldRoleId) : [];
+        $preservedExtraIds = array_values(array_diff($existingPermissionIds, $oldRolePermissionIds));
+
+        $validatedManualIds = [];
+        if ($manualProvided && !empty($manualPermissionIds)) {
+            $validatedManualIds = Permission::query()
+                ->whereIn('id', $manualPermissionIds)
+                ->where('status', 'active')
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->toArray();
+        }
+
+        $targetPermissionIds = array_values(array_unique(array_merge(
+            $newRolePermissionIds,
+            $preservedExtraIds,
+            $validatedManualIds
+        )));
+
+        DB::table('user_permission')->where('user_id', $staffId)->delete();
+
+        if (empty($targetPermissionIds)) {
+            return;
+        }
+
+        $now = now();
+        $rows = array_map(static fn ($permissionId) => [
+            'user_id' => $staffId,
+            'permission_id' => $permissionId,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $targetPermissionIds);
+
+        DB::table('user_permission')->insert($rows);
+    }
+
+    private function getRolePermissionIds(int $roleId): array
+    {
+        return DB::table('feature_role as fr')
+            ->join('permissions as p', 'p.feature_id', '=', 'fr.feature_id')
+            ->join('features as f', 'f.id', '=', 'p.feature_id')
+            ->where('fr.role_id', $roleId)
+            ->where('p.status', 'active')
+            ->where('f.status', 'active')
+            ->pluck('p.id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->toArray();
     }
 
     private function preparePersonalInformationImages(array $personalInformation): array

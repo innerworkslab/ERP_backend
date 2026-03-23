@@ -19,6 +19,8 @@ class StaffRepository extends BaseRepo
                 'role',
                 'branch',
                 'department',
+                'permissions',
+                'permissions.feature',
                 'staffPersonalInformation',
                 'staffEmploymentInformation',
                 'staffBankingInformation',

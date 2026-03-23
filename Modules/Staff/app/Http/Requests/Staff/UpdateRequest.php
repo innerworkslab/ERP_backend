@@ -21,7 +21,7 @@ class UpdateRequest extends FormRequest
             'phone_number' => 'required|string|max:50|unique:users,phone_number,' . $id,
             'role_id' => 'required|exists:roles,id',
             'branch_id' => 'nullable|exists:branches,id',
-            'department_id' => 'nullable|exists:departments,id',
+            'department_id' => 'required|exists:departments,id',
             'status' => 'required|in:active,inactive',
 
             'personal_information' => 'required|array',
@@ -53,6 +53,9 @@ class UpdateRequest extends FormRequest
             'authorized_features.*.recommended_by_rule' => 'nullable|string|max:255',
             'authorized_features.*.access_type' => 'nullable|string|max:100',
             'authorized_features.*.permission_level' => 'nullable|string|max:100',
+
+            'permission_ids' => 'nullable|array',
+            'permission_ids.*' => 'required_with:permission_ids|integer|exists:permissions,id|distinct',
         ];
     }
 

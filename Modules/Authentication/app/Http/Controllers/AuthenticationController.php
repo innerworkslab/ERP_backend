@@ -4,7 +4,6 @@ namespace Modules\Authentication\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Traits\ApiResponser;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Modules\Authentication\app\Http\Requests\LoginRequest;
@@ -33,6 +32,9 @@ class AuthenticationController extends Controller
             $user = $this->authentication_service->whereFirst('phone_number', $validated['phone_number']);
             if (!$user) {
                 return $this->errorResponse("Phone number does not exist.", 401);
+            }
+            if ($user->status !== 'active') {
+                return $this->errorResponse('Account is inactive. Please contact admin.', 403);
             }
             if (!Hash::check($validated['password'], $user->password)) {
                 return $this->errorResponse("Wrong Password. Try again!", 401);

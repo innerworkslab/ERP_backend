@@ -4,6 +4,7 @@ namespace Modules\Staff\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Traits\ApiResponser;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Modules\Staff\app\Http\Requests\Staff\ChangePasswordRequest;
 use Modules\Staff\app\Http\Requests\Staff\CreateRequest;
@@ -58,6 +59,8 @@ class StaffController extends Controller
                 'role',
                 'branch',
                 'department',
+                'permissions',
+                'permissions.feature',
                 'staffPersonalInformation',
                 'staffEmploymentInformation',
                 'staffBankingInformation',
@@ -88,6 +91,14 @@ class StaffController extends Controller
             }
             $validated = $request->validated();
             $result = $this->staff_service->create($validated);
+
+            logger()->info('Staff onboarding completed', [
+                'action' => 'staff_onboarding_create',
+                'staff_id' => $result?->id,
+                'role_id' => $validated['role_id'] ?? null,
+                'department_id' => $validated['department_id'] ?? null,
+                'performed_by' => auth()->id(),
+            ]);
 
             return $this->successResponse($result, 201, 'Staff is created successfully');
         } catch (\Exception $e) {
@@ -135,6 +146,14 @@ class StaffController extends Controller
             $validated = $request->validated();
             $result = $this->staff_service->update((int) $id, $validated);
             if ($result) {
+                logger()->info('Staff onboarding updated', [
+                    'action' => 'staff_onboarding_update',
+                    'staff_id' => $result->id,
+                    'role_id' => $validated['role_id'] ?? null,
+                    'department_id' => $validated['department_id'] ?? null,
+                    'performed_by' => auth()->id(),
+                ]);
+
                 return $this->successResponse($result, 200, 'Staff is updated successfully');
             }
 
@@ -210,12 +229,46 @@ class StaffController extends Controller
 
             $data = $this->staff_service->find((int) $id);
             if ($data) {
+                $targetStatus = $data->status === 'active' ? 'inactive' : 'active';
                 $this->staff_service->toggleStaffStatus($data);
+
+                logger()->info('Staff status changed', [
+                    'action' => 'staff_status_toggle',
+                    'staff_id' => $data->id,
+                    'new_status' => $targetStatus,
+                    'performed_by' => auth()->id(),
+                ]);
 
                 return $this->successResponse([], 200, 'Toggle status successfully');
             }
 
             return $this->errorResponse('Staff not found', 404);
+        } catch (\Exception $e) {
+            logger()->error($e);
+
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
+
+    public function featureSuggestions(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'role_id' => 'required|integer|exists:roles,id',
+                'department_id' => 'required|integer|exists:departments,id',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationErrorResponse($validator);
+            }
+
+            $validated = $validator->validated();
+            $result = $this->staff_service->getFeatureSuggestions(
+                (int) $validated['role_id'],
+                (int) $validated['department_id']
+            );
+
+            return $this->successResponse($result, 200, 'Feature suggestions fetched successfully');
         } catch (\Exception $e) {
             logger()->error($e);
 
