@@ -45,6 +45,36 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Update Feature', 'key' => 'update_feature'],
                 ['name' => 'Assign Role To Feature', 'key' => 'assign_role_to_feature'],
             ],
+            // User
+            'user_feature' => [
+                ['name' => 'View User', 'key' => 'view_user'],
+                ['name' => 'Create User', 'key' => 'create_user'],  
+                ['name' => 'Update User', 'key' => 'update_user'],
+                ['name' => 'Delete User', 'key' => 'delete_user'],
+                ['name' => 'Assign Role To User', 'key' => 'assign_role_to_user'],
+            ],
+            // Customer
+            'customer_feature' => [
+                ['name' => 'View Customer', 'key' => 'view_customer'],
+                ['name' => 'Create Customer', 'key' => 'create_customer'],
+                ['name' => 'Update Customer', 'key' => 'update_customer'],
+                ['name' => 'Delete Customer', 'key' => 'delete_customer'],
+            ],
+            // Supplier
+            'supplier_feature' => [
+                ['name' => 'View Supplier', 'key' => 'view_supplier'],
+                ['name' => 'Create Supplier', 'key' => 'create_supplier'],
+                ['name' => 'Update Supplier', 'key' => 'update_supplier'],
+                ['name' => 'Delete Supplier', 'key' => 'delete_supplier'],
+            ],
+
+            // Feature Recommendation Rule
+            'feature_recommendation_rule_feature' => [
+                ['name' => 'View Feature Recommendation Rule', 'key' => 'view_feature_recommendation_rule'],
+                ['name' => 'Create Feature Recommendation Rule', 'key' => 'create_feature_recommendation_rule'],
+                ['name' => 'Update Feature Recommendation Rule', 'key' => 'update_feature_recommendation_rule'],
+                ['name' => 'Delete Feature Recommendation Rule', 'key' => 'delete_feature_recommendation_rule'],
+            ],
         ];
 
         foreach ($permissions as $key => $perms) {

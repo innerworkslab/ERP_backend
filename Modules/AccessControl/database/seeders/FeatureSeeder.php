@@ -45,6 +45,37 @@ class FeatureSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'User',
+                'key' => 'user_feature',
+                'module' => 'AccessControl',
+                'description' => 'This is a feature of user',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Feature Recommendation Rule',
+                'key' => 'feature_recommendation_rule_feature',
+                'module' => 'AccessControl',
+                'description' => 'This is a feature of feature recommendation rule',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Customer',
+                'key' => 'customer_feature',
+                'module' => 'AccessControl',
+                'description' => 'This is a feature of customer',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],[
+                'name' => 'Supplier',
+                'key' => 'supplier_feature',
+                'module' => 'AccessControl',
+                'description' => 'This is a feature of supplier',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         foreach ($features as $feature) {

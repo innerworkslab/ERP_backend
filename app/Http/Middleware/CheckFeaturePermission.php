@@ -4,7 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Modules\AccessControl\app\Models\Permission;
+use Modules\Staff\app\Models\StaffAuthorizedFeature;
 
 class CheckFeaturePermission
 {
@@ -29,6 +30,7 @@ class CheckFeaturePermission
                 'message' => 'Forbidden: permission denied'
             ], 403);
         }
+
         // super admin bypass
         // if ($user->role && $user->role->is_super) {
         //     return $next($request);
