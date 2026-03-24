@@ -113,7 +113,14 @@ class FeatureSeeder extends Seeder
                 'description' => 'This is a feature of uom conversion',
                 'created_at' => now(),
                 'updated_at' => now(),
-            ],
+            ],[
+                'name' => 'Currency',
+                'key' => 'currency_feature',
+                'module' => 'Organization',
+                'description' => 'This is a feature of currency',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
         ];
 
         foreach ($features as $feature) {

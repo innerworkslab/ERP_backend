@@ -90,6 +90,7 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Create Discount Group', 'key' => 'create_discount_group'],
                 ['name' => 'Update Discount Group', 'key' => 'update_discount_group'],
                 ['name' => 'Delete Discount Group', 'key' => 'delete_discount_group'],
+            ],
             // Variation
             'variation_feature' => [
                 ['name' => 'View Variation', 'key' => 'view_variation'],
@@ -112,6 +113,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Create UOM Conversion', 'key' => 'create_uom_conversion'],
                 ['name' => 'Update UOM Conversion', 'key' => 'update_uom_conversion'],
                 ['name' => 'Delete UOM Conversion', 'key' => 'delete_uom_conversion'],
+            ],
+
+            //Currency 
+            'currency_feature' => [
+                ['name' => 'View Currency', 'key' => 'view_currency'],
+                ['name' => 'Create Currency', 'key' => 'create_currency'],
+                ['name' => 'Update Currency', 'key' => 'update_currency'],
+                ['name' => 'Delete Currency', 'key' => 'delete_currency'],
             ],
         ];
 
