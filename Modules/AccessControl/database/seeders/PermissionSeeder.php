@@ -84,6 +84,12 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Delete Price Group', 'key' => 'delete_price_group'],
             ],
 
+            // Discount Group
+            'discount_group_feature' => [
+                ['name' => 'View Discount Group', 'key' => 'view_discount_group'],
+                ['name' => 'Create Discount Group', 'key' => 'create_discount_group'],
+                ['name' => 'Update Discount Group', 'key' => 'update_discount_group'],
+                ['name' => 'Delete Discount Group', 'key' => 'delete_discount_group'],
             // Variation
             'variation_feature' => [
                 ['name' => 'View Variation', 'key' => 'view_variation'],
