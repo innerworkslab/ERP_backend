@@ -82,6 +82,13 @@ class FeatureSeeder extends Seeder
                 'description' => 'This is a feature of price group',
                 'created_at' => now(),
                 'updated_at' => now(),
+            ],[
+                    'name' => 'Discount Group',
+                    'key' => 'discount_group_feature',
+                    'module' => 'AccessControl',
+                    'description' => 'This is a feature of discount group',
+                    'created_at' => now(),
+                    'updated_at' => now(),
             ],
         ];
 

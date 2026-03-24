@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\PriceGroup\app\Http\Controllers\DiscountGroupController;
 use Modules\PriceGroup\app\Http\Controllers\PriceGroupController;
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
@@ -11,5 +12,14 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
         Route::put('/{id}', [PriceGroupController::class, 'update'])->middleware('permission:update_price_group');
         Route::delete('/{id}', [PriceGroupController::class, 'destroy'])->middleware('permission:delete_price_group');
         Route::patch('/{id}/toggle-status', [PriceGroupController::class, 'toggleActive'])->middleware('permission:update_price_group');
+    });
+
+    Route::prefix('discount-groups')->group(function () {
+        Route::get('/', [DiscountGroupController::class, 'index'])->middleware('permission:view_discount_group');
+        Route::post('/', [DiscountGroupController::class, 'store'])->middleware('permission:create_discount_group');
+        Route::get('/{id}', [DiscountGroupController::class, 'show'])->middleware('permission:view_discount_group');
+        Route::put('/{id}', [DiscountGroupController::class, 'update'])->middleware('permission:update_discount_group');
+        Route::delete('/{id}', [DiscountGroupController::class, 'destroy'])->middleware('permission:delete_discount_group');
+        Route::patch('/{id}/toggle-status', [DiscountGroupController::class, 'toggleActive'])->middleware('permission:update_discount_group');
     });
 });
