@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\PriceGroup\app\Http\Controllers\PriceGroupController;
+use Modules\PriceGroup\app\Http\Controllers\SellingPriceGroupController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('pricegroups', PriceGroupController::class)->names('pricegroup');
+    Route::resource('pricegroups', SellingPriceGroupController::class)->names('pricegroup');
 });

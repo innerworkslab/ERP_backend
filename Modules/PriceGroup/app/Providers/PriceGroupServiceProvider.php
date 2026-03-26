@@ -5,7 +5,7 @@ namespace Modules\PriceGroup\app\Providers;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\PriceGroup\app\Http\Repositories\DiscountGroup\DiscountGroupRepository;
-use Modules\PriceGroup\app\Http\Repositories\PricingGroup\PricingGroupRepository;
+use Modules\PriceGroup\app\Http\Repositories\SellingPriceGroup\SellingPriceGroupRepository;
 use Modules\PriceGroup\app\Providers\RouteServiceProvider;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
@@ -40,7 +40,7 @@ class PriceGroupServiceProvider extends ServiceProvider
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
 
-        $this->app->bind(PricingGroupRepository::class, PricingGroupRepository::class);
+        $this->app->bind(SellingPriceGroupRepository::class, SellingPriceGroupRepository::class);
         $this->app->bind(DiscountGroupRepository::class, DiscountGroupRepository::class);
     }
 

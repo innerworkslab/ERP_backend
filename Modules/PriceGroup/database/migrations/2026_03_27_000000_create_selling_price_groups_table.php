@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pricing_groups', function (Blueprint $table) {
+        Schema::create('selling_price_groups', function (Blueprint $table) {
             $table->id();
             $table->string('name', 150)->unique();
             $table->unsignedBigInteger('customer_type_id')->nullable();
             $table->unsignedBigInteger('branch_id')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->enum('profit_margin_type', ['percentage', 'fixed'])->default('percentage');
+            $table->decimal('profit_margin_value', 15, 2)->default(0);
+            $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
 
             $table->foreign('customer_type_id')->references('id')->on('customer_types')->onDelete('set null');
@@ -31,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pricing_groups');
+        Schema::dropIfExists('selling_price_groups');
     }
 };
