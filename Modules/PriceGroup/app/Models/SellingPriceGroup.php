@@ -7,16 +7,21 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Organization\app\Models\Branch;
 use Modules\Stakeholder\app\Models\CustomerType;
 
-class PricingGroup extends Model
+class SellingPriceGroup extends Model
 {
-    protected $table = 'pricing_groups';
+    protected $table = 'selling_price_groups';
 
     protected $fillable = [
-        'name','customer_type_id','branch_id','is_active'
+        'name',
+        'customer_type_id',
+        'branch_id',
+        'profit_margin_type',
+        'profit_margin_value',
+        'status',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'profit_margin_value' => 'decimal:2',
     ];
 
     public function customer_type(): BelongsTo

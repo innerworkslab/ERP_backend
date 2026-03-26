@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\PriceGroup\app\Http\Requests\PricingGroup;
+namespace Modules\PriceGroup\app\Http\Requests\SellingPriceGroup;
 
 use Illuminate\Foundation\Http\FormRequest;
 
