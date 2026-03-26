@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Product\app\Http\Controllers\BrandController;
+use Modules\Product\app\Http\Controllers\CategoryController;
 use Modules\Product\app\Http\Controllers\VariationController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -21,4 +22,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('{id}', [BrandController::class, 'delete'])->middleware('permission:delete_brand');
         Route::get('{id}', [BrandController::class, 'findOrFail'])->middleware('permission:view_brand');
     });
+
+    Route::prefix('v1/categories')->group(function () {
+        Route::patch('{id}/toggle-status', [CategoryController::class, 'toggleActive'])->middleware('permission:update_category');
+        Route::get('', [CategoryController::class, 'index'])->middleware('permission:view_category');
+        Route::post('', [CategoryController::class, 'create'])->middleware('permission:create_category');
+        Route::put('{id}', [CategoryController::class, 'update'])->middleware('permission:update_category');
+        Route::delete('{id}', [CategoryController::class, 'delete'])->middleware('permission:delete_category');
+        Route::get('{id}', [CategoryController::class, 'findOrFail'])->middleware('permission:view_category');
+    });
+
 });

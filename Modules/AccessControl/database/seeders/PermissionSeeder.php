@@ -130,6 +130,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Update Brand', 'key' => 'update_brand'],
                 ['name' => 'Delete Brand', 'key' => 'delete_brand'],
             ],
+
+            //Category
+            'category_feature' => [
+                ['name' => 'View Category', 'key' => 'view_category'],
+                ['name' => 'Create Category', 'key' => 'create_category'],
+                ['name' => 'Update Category', 'key' => 'update_category'],
+                ['name' => 'Delete Category', 'key' => 'delete_category'],
+            ],
         ];
 
         foreach ($permissions as $key => $perms) {

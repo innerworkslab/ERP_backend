@@ -11,6 +11,15 @@ class BrandRepository extends BaseRepo
         parent::__construct($model);
     }
 
+    public function find($id)
+    {
+        $data = $this->model->find($id);
+        if ($data) {
+            $data->load(['created_by', 'updated_by']);
+        }
+        return $data;
+    }
+
     public function toggleActive(Brand $brand)
     {
         $brand->updated_by = auth()->user()->id;
