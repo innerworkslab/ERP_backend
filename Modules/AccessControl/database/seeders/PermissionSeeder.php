@@ -122,6 +122,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Update Currency', 'key' => 'update_currency'],
                 ['name' => 'Delete Currency', 'key' => 'delete_currency'],
             ],
+            
+            // Brand
+            'brand_feature' => [
+                ['name' => 'View Brand', 'key' => 'view_brand'],
+                ['name' => 'Create Brand', 'key' => 'create_brand'],
+                ['name' => 'Update Brand', 'key' => 'update_brand'],
+                ['name' => 'Delete Brand', 'key' => 'delete_brand'],
+            ],
         ];
 
         foreach ($permissions as $key => $perms) {

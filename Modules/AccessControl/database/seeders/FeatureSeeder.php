@@ -120,6 +120,13 @@ class FeatureSeeder extends Seeder
                 'description' => 'This is a feature of currency',
                 'created_at' => now(),
                 'updated_at' => now(),
+            ],[
+                'name' => 'Brand',
+                'key' => 'brand_feature',
+                'module' => 'Product',
+                'description' => 'This is a feature of brand',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]
         ];
 
