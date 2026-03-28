@@ -11,6 +11,8 @@ class PriceGroupDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            \Modules\PriceGroup\database\seeders\SellingPriceGroupSeeder::class,
+        ]);
     }
 }
