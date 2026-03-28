@@ -134,7 +134,15 @@ class FeatureSeeder extends Seeder
                 'description' => 'This is a feature of category',
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]
+            ],
+            [
+                'name' => 'Location',
+                'key' => 'location_feature',
+                'module' => 'Location',
+                'description' => 'This is a feature of location',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         foreach ($features as $feature) {

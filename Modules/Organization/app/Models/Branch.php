@@ -6,17 +6,29 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\AccessControl\app\Models\Role;
+use Modules\Location\app\Models\City;
+use Modules\Location\app\Models\State;
+use Modules\PriceGroup\app\Models\SellingPriceGroup;
 // use Modules\Organization\Database\Factories\BranchFactory;
 
 class Branch extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'prefix',
         'name',
-        'location',
+        'latitude',
+        'longitude',
+        'city_id',
+        'state_id',
+        'mobile',
+        'alternate_phone',
+        'email',
+        'website',
+        'default_selling_price_group_id',
         'status',
         'created_by',
         'updated_by'
@@ -30,6 +42,11 @@ class Branch extends Model
         }
         if (array_key_exists('updated_at', $attributes)) {
             $attributes['updated_at'] = Carbon::parse($attributes['updated_at'])->format('Y-m-d H:i:s');
+        }
+        if (array_key_exists('deleted_at', $attributes)) {
+            if ($attributes['deleted_at'] !== null) {
+                $attributes['deleted_at'] = Carbon::parse($attributes['deleted_at'])->format('Y-m-d H:i:s');
+            }
         }
         return $attributes;
     }
@@ -57,5 +74,23 @@ class Branch extends Model
     public function updated_by()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class);
+    }
+
+    public function state()
+    {
+        return $this->belongsTo(State::class);
+    }
+
+    public function priceGroup()
+    {
+        return $this->belongsTo(
+            SellingPriceGroup::class,
+            'default_selling_price_group_id'
+        );
     }
 }
