@@ -25,7 +25,15 @@ class UpdateRequest extends FormRequest
         return [
             'prefix' => 'required|string|max:50|unique:branches,prefix,' . $id,
             'name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
+            'latitude' => 'nullable|string|max:255',
+            'longitude' => 'nullable|string|max:255',
+            'city_id' => 'required|integer|exists:cities,id',
+            'state_id' => 'required|integer|exists:states,id',
+            'mobile' => 'required|string',
+            'alternate_phone' => 'nullable|string',
+            'email' => 'nullable|email',
+            'website' => 'nullable|string',
+            'default_selling_price_group_id' => 'required|integer|exists:selling_price_groups,id',
             'status' => 'required|in:active,inactive',
         ];
     }

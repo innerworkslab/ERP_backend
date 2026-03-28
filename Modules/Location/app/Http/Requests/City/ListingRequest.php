@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Organization\app\Http\Requests\Branch;
+namespace Modules\Location\app\Http\Requests\City;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -25,9 +25,7 @@ class ListingRequest extends FormRequest
             'page' => 'integer',
             'per_page' => 'integer',
             'search'=> 'string',
-            'status' => 'string|in:active,inactive',
-            'state_id' => 'integer|exists:states,id',
-            'city_id' => 'integer|exists:cities,id',
+            'state_id' => 'integer|exists:states,id'
         ];
     }
 

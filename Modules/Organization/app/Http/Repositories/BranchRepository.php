@@ -28,7 +28,7 @@ class BranchRepository extends BaseRepo
     {
         $data = $this->model->find($id);
         if ($data) {
-            $data->load(['created_by', 'updated_by']);
+            $data->load(['created_by', 'updated_by', 'state', 'city', 'priceGroup']);
         }
         return $data;
     }

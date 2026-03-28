@@ -6,5 +6,6 @@
     "Staff": true,
     "PriceGroup": true,
     "Product": true,
-    "Inventory": true
+    "Inventory": true,
+    "Location": true
 }

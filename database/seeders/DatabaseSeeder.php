@@ -8,6 +8,8 @@ use Illuminate\Database\Seeder;
 use Modules\AccessControl\app\Models\Permission;
 use Modules\AccessControl\database\seeders\FeatureSeeder;
 use Modules\AccessControl\database\seeders\PermissionSeeder;
+use Modules\Location\database\seeders\CitySeeder;
+use Modules\Location\database\seeders\StateSeeder;
 use Modules\Organization\database\seeders\OrganizationDatabaseSeeder;
 use Modules\Stakeholder\database\seeders\StakeholderDatabaseSeeder;
 
@@ -31,6 +33,8 @@ class DatabaseSeeder extends Seeder
             SuperAdminSeeder::class,
             StakeholderDatabaseSeeder::class,
             OrganizationDatabaseSeeder::class,
+            StateSeeder::class,
+            CitySeeder::class
         ]);
     }
 }
