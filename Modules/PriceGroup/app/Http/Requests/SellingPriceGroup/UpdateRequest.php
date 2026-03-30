@@ -26,14 +26,6 @@ class UpdateRequest extends FormRequest
             ],
             'customer_type_id' => ['sometimes', 'nullable', 'integer', 'exists:customer_types,id'],
             'branch_id' => ['sometimes', 'nullable', 'integer', 'exists:branches,id'],
-            'profit_margin_type' => ['sometimes', 'required', 'in:percentage,fixed'],
-            'profit_margin_value' => [
-                'sometimes',
-                'required',
-                'numeric',
-                'min:0',
-                Rule::when($this->input('profit_margin_type') === 'percentage', ['lte:100']),
-            ],
         ];
     }
 }
