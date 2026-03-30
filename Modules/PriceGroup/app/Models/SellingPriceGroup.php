@@ -15,8 +15,6 @@ class SellingPriceGroup extends Model
         'name',
         'customer_type_id',
         'branch_id',
-        'profit_margin_type',
-        'profit_margin_value',
         'status',
     ];
 

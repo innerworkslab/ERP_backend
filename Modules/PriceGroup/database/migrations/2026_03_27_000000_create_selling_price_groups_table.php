@@ -16,8 +16,6 @@ return new class extends Migration
             $table->string('name', 150)->unique();
             $table->unsignedBigInteger('customer_type_id')->nullable();
             $table->unsignedBigInteger('branch_id')->nullable();
-            $table->enum('profit_margin_type', ['percentage', 'fixed'])->default('percentage');
-            $table->decimal('profit_margin_value', 15, 2)->default(0);
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
 
