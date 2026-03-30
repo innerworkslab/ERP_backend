@@ -134,6 +134,13 @@ class FeatureSeeder extends Seeder
                 'description' => 'This is a feature of category',
                 'created_at' => now(),
                 'updated_at' => now(),
+            ],[
+                'name' => 'Tax',
+                'key' => 'tax_feature',
+                'module' => 'Product',
+                'description' => 'This is a feature of tax',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
                 'name' => 'Location',
