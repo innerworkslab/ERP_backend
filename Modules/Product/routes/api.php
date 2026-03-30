@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Product\app\Http\Controllers\BrandController;
 use Modules\Product\app\Http\Controllers\CategoryController;
+use Modules\Product\app\Http\Controllers\TaxController;
 use Modules\Product\app\Http\Controllers\VariationController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -30,6 +31,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('{id}', [CategoryController::class, 'update'])->middleware('permission:update_category');
         Route::delete('{id}', [CategoryController::class, 'delete'])->middleware('permission:delete_category');
         Route::get('{id}', [CategoryController::class, 'findOrFail'])->middleware('permission:view_category');
+    });
+
+    Route::prefix('v1/taxes')->group(function () {
+        Route::patch('{id}/toggle-status', [TaxController::class, 'toggleActive'])->middleware('permission:update_tax');
+        Route::get('', [TaxController::class, 'index'])->middleware('permission:view_tax');
+        Route::post('', [TaxController::class, 'create'])->middleware('permission:create_tax');
+        Route::put('{id}', [TaxController::class, 'update'])->middleware('permission:update_tax');
+        Route::delete('{id}', [TaxController::class, 'delete'])->middleware('permission:delete_tax');
+        Route::get('{id}', [TaxController::class, 'findOrFail'])->middleware('permission:view_tax');
     });
 
 });
