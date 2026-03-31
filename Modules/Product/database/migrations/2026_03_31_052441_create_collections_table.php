@@ -11,17 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('products', function (Blueprint $table) {
+        Schema::create('collections', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('sku')->unique();
-            $table->string('image')->nullable();
-            $table->string('image_path')->nullable();
-            $table->string('image_url')->nullable();
-            $table->unsignedBigInteger('category_id')->nullable();
-            $table->unsignedBigInteger('brand_id')->nullable();
-            $table->decimal('alert_quantity', 10, 2)->default(0);
-            
+
             //purchase
             $table->decimal('purchase_price', 10, 2)->default(0);
             $table->unsignedBigInteger('purchase_currency_id')->nullable();
@@ -34,26 +27,22 @@ return new class extends Migration
             $table->unsignedBigInteger('sale_tax_id')->nullable();
             $table->unsignedBigInteger('sale_uom_id')->nullable();
 
-            //country
-            $table->unsignedBigInteger('origin_country_id')->nullable();
+            $table->enum('status', ['active', 'inactive'])->default('active');
 
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
 
-            $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
-
-            $table->foreign('category_id')->references('id')->on('categories')->onDelete('set null');
-            $table->foreign('brand_id')->references('id')->on('brands')->onDelete('set null');
+            
             $table->foreign('purchase_currency_id')->references('id')->on('currencies')->onDelete('set null');
             $table->foreign('purchase_tax_id')->references('id')->on('taxs')->onDelete('set null');
             $table->foreign('purchase_uom_id')->references('id')->on('unit_of_measurements')->onDelete('set null');
             $table->foreign('sale_currency_id')->references('id')->on('currencies')->onDelete('set null');
             $table->foreign('sale_tax_id')->references('id')->on('taxs')->onDelete('set null');
             $table->foreign('sale_uom_id')->references('id')->on('unit_of_measurements')->onDelete('set null');
-            $table->foreign('origin_country_id')->references('id')->on('origin_countries')->onDelete('set null');   
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
+            
         });
     }
 
@@ -62,6 +51,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('products');
+        Schema::dropIfExists('collections');
     }
 };

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Product\app\Http\Controllers\BrandController;
 use Modules\Product\app\Http\Controllers\CategoryController;
+use Modules\Product\app\Http\Controllers\CollectionController;
 use Modules\Product\app\Http\Controllers\OriginCountryController;
 use Modules\Product\app\Http\Controllers\ProductController;
 use Modules\Product\app\Http\Controllers\TaxController;
@@ -59,6 +60,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('{id}', [ProductController::class, 'update'])->middleware('permission:update_product');
         Route::delete('{id}', [ProductController::class, 'delete'])->middleware('permission:delete_product');
         Route::get('{id}', [ProductController::class, 'findOrFail'])->middleware('permission:view_product');
+    });
+
+    Route::prefix('v1/collections')->group(function () {
+        Route::patch('{id}/toggle-status', [CollectionController::class, 'toggleActive'])->middleware('permission:update_collection');
+        Route::get('', [CollectionController::class, 'index'])->middleware('permission:view_collection');
+        Route::post('', [CollectionController::class, 'create'])->middleware('permission:create_collection');
+        Route::post('{id}', [CollectionController::class, 'update'])->middleware('permission:update_collection');
+        Route::delete('{id}', [CollectionController::class, 'delete'])->middleware('permission:delete_collection');
+        Route::get('{id}', [CollectionController::class, 'findOrFail'])->middleware('permission:view_collection');
+        Route::get('{id}/products', [CollectionController::class, 'getProducts'])->middleware('permission:view_collection');
+        Route::post('{id}/products', [CollectionController::class, 'addProducts'])->middleware('permission:update_collection');
     });
 
 }); 
