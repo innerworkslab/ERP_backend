@@ -38,12 +38,20 @@ class ProductController extends Controller
             $conditions = [];
             $status = null;
 
-            if (!empty($validated['search'])) {
-                $search = $validated['search'];
+            $keyword = $validated['keyword'] ?? ($validated['search'] ?? null);
+            if (!empty($keyword)) {
                 $searches = [
-                    'name' => $search,
-                    'sku' => $search,
+                    'name' => $keyword,
+                    'sku' => $keyword,
                 ];
+            }
+
+            if (!empty($validated['category_id'])) {
+                $conditions['category_id'] = (int) $validated['category_id'];
+            }
+
+            if (!empty($validated['brand_id'])) {
+                $conditions['brand_id'] = (int) $validated['brand_id'];
             }
 
             if (!empty($validated['status'])) {
