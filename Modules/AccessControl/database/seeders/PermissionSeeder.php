@@ -147,6 +147,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Delete Tax', 'key' => 'delete_tax'],
             ],
 
+            //Product
+            'product_feature' => [
+                ['name' => 'View Product', 'key' => 'view_product'],
+                ['name' => 'Create Product', 'key' => 'create_product'],
+                ['name' => 'Update Product', 'key' => 'update_product'],
+                ['name' => 'Delete Product', 'key' => 'delete_product'],
+            ],
+
             // Location
             'location_feature' => [
                 ['name' => 'View Location Record', 'key' => 'view_location_record'],

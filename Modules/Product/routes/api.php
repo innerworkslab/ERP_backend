@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Product\app\Http\Controllers\BrandController;
 use Modules\Product\app\Http\Controllers\CategoryController;
+use Modules\Product\app\Http\Controllers\OriginCountryController;
+use Modules\Product\app\Http\Controllers\ProductController;
 use Modules\Product\app\Http\Controllers\TaxController;
 use Modules\Product\app\Http\Controllers\VariationController;
 
@@ -42,4 +44,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('{id}', [TaxController::class, 'findOrFail'])->middleware('permission:view_tax');
     });
 
-});
+    Route::prefix('v1/origin-countries')->group(function() {
+        Route::get('', [OriginCountryController::class, 'index'])->middleware('permission:view_product'); 
+        Route::post('', [OriginCountryController::class, 'create'])->middleware('permission:create_product');
+        Route::put('{id}', [OriginCountryController::class, 'update'])->middleware('permission:update_product');
+        Route::delete('{id}', [OriginCountryController::class, 'delete'])->middleware('permission:delete_product');
+        Route::get('{id}', [OriginCountryController::class, 'findOrFail'])->middleware('permission:view_product');
+    });
+
+    Route::prefix('v1/products')->group(function () {
+        Route::patch('{id}/toggle-status', [ProductController::class, 'toggleActive'])->middleware('permission:update_product');
+        Route::get('', [ProductController::class, 'index'])->middleware('permission:view_product');
+        Route::post('', [ProductController::class, 'create'])->middleware('permission:create_product');
+        Route::post('{id}', [ProductController::class, 'update'])->middleware('permission:update_product');
+        Route::delete('{id}', [ProductController::class, 'delete'])->middleware('permission:delete_product');
+        Route::get('{id}', [ProductController::class, 'findOrFail'])->middleware('permission:view_product');
+    });
+
+}); 
