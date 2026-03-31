@@ -3,32 +3,30 @@
 namespace Modules\Product\app\Models;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\Inventory\app\Models\UnitOfMeasurement;
 use Modules\Organization\app\Models\Currency;
-use Modules\Product\app\Models\Collection;
 use Modules\Product\app\Models\CollectionItem;
-// use Modules\Product\Database\Factories\ProductFactory;
+use Modules\Product\app\Models\Product;
+// use Modules\Product\Database\Factories\CollectionFactory;
 
-class Product extends Model
+class Collection extends Model
 {
     use HasFactory;
+
+    protected $casts = [
+        'purchase_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+    ];
 
     /**
      * The attributes that are mass assignable.
      */
     protected $fillable = [
         'name',
-        'sku',
-        'image',
-        'image_path',
-        'image_url',
-        'category_id',
-        'brand_id',
-        'alert_quantity',
         'purchase_price',
         'purchase_currency_id',
         'purchase_tax_id',
@@ -37,25 +35,37 @@ class Product extends Model
         'sale_currency_id',
         'sale_tax_id',
         'sale_uom_id',
-        'origin_country_id',
+        'status',
         'created_by',
         'updated_by',
-        'status',
     ];
 
-    public function category(): BelongsTo
+    // protected static function newFactory(): CollectionFactory
+    // {
+    //     // return CollectionFactory::new();
+    // }
+
+    public function collectionItems()
     {
-        return $this->belongsTo(Category::class, 'category_id');
+        return $this->hasMany(CollectionItem::class, 'collection_id');
     }
 
-    public function brand(): BelongsTo
+    public function products(): BelongsToMany
     {
-        return $this->belongsTo(Brand::class, 'brand_id');
+        return $this->belongsToMany(Product::class, 'collection_items', 'collection_id', 'product_id')
+            ->using(CollectionItem::class)
+            ->withPivot(['id', 'product_qty'])
+            ->withTimestamps();
     }
 
-    public function origin_country(): BelongsTo
+    public function created_by(): BelongsTo
     {
-        return $this->belongsTo(OriginCountry::class, 'origin_country_id');
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updated_by(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     public function purchase_currency(): BelongsTo
@@ -87,27 +97,4 @@ class Product extends Model
     {
         return $this->belongsTo(UnitOfMeasurement::class, 'sale_uom_id');
     }
-
-    public function created_by(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function updated_by(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
-    }
-
-    public function collections(): BelongsToMany
-    {
-        return $this->belongsToMany(Collection::class, 'collection_items', 'product_id', 'collection_id')
-            ->using(CollectionItem::class)
-            ->withPivot(['id', 'product_qty'])
-            ->withTimestamps();
-    }
-
-    // protected static function newFactory(): ProductFactory
-    // {
-    //     // return ProductFactory::new();
-    // }
 }

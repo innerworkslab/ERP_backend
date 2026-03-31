@@ -155,6 +155,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Delete Product', 'key' => 'delete_product'],
             ],
 
+            // Collection
+            'collection_feature' => [
+                ['name' => 'View Collection', 'key' => 'view_collection'],
+                ['name' => 'Create Collection', 'key' => 'create_collection'],
+                ['name' => 'Update Collection', 'key' => 'update_collection'],
+                ['name' => 'Delete Collection', 'key' => 'delete_collection'],
+            ],
+
             // Location
             'location_feature' => [
                 ['name' => 'View Location Record', 'key' => 'view_location_record'],
