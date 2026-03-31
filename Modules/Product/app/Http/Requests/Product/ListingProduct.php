@@ -11,7 +11,10 @@ class ListingProduct extends FormRequest
         return [
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
+            'keyword' => 'nullable|string|max:255',
             'search' => 'nullable|string|max:255',
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'brand_id' => 'nullable|integer|exists:brands,id',
             'status' => 'nullable|string|in:active,inactive',
         ];
     }
