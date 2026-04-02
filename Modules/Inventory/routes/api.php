@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementConversionController;
+use Modules\Inventory\app\Http\Controllers\InventoryController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/unit-of-measurements')->group(function () {
@@ -19,5 +20,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('', [UnitOfMeasurementConversionController::class, 'create'])->middleware('permission:create_uom_conversion');
         Route::put('{id}', [UnitOfMeasurementConversionController::class, 'update'])->middleware('permission:update_uom_conversion');
         Route::get('{id}', [UnitOfMeasurementConversionController::class, 'findOrFail'])->middleware('permission:view_uom_conversion');
+    });
+
+    Route::prefix('v1/inventories')->group(function(){
+        Route::patch('{id}/branch/{branchId}/toggle-status', [InventoryController::class, 'toggleActive'])->middleware('permission:update_inventory');
+        Route::get('', [InventoryController::class, 'index'])->middleware('permission:view_inventory');
+        Route::post('', [InventoryController::class, 'create'])->middleware('permission:create_inventory'); 
+        Route::put('{id}', [InventoryController::class, 'update'])->middleware('permission:update_inventory'); 
+        Route::delete('{id}', [InventoryController::class, 'delete'])->middleware('permission:delete_inventory');
+        Route::get('{id}', [InventoryController::class, 'findOrFail'])->middleware('permission:view_inventory');  
     });
 });

@@ -163,6 +163,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Delete Collection', 'key' => 'delete_collection'],
             ],
 
+            // Inventory
+            'inventory_feature' => [
+                ['name' => 'View Inventory', 'key' => 'view_inventory'],
+                ['name' => 'Create Inventory', 'key' => 'create_inventory'],
+                ['name' => 'Update Inventory', 'key' => 'update_inventory'],
+                ['name' => 'Delete Inventory', 'key' => 'delete_inventory'],
+            ],
+            
             // Location
             'location_feature' => [
                 ['name' => 'View Location Record', 'key' => 'view_location_record'],
