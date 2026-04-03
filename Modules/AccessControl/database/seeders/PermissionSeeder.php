@@ -171,6 +171,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Delete Inventory', 'key' => 'delete_inventory'],
             ],
             
+            // Opening Stock
+            'opening_stock_feature' => [
+                ['name' => 'View Opening Stock', 'key' => 'view_opening_stock'],
+                ['name' => 'Create Opening Stock', 'key' => 'create_opening_stock'],
+                ['name' => 'Update Opening Stock', 'key' => 'update_opening_stock'],
+                ['name' => 'Delete Opening Stock', 'key' => 'delete_opening_stock'],
+            ],
+            
             // Location
             'location_feature' => [
                 ['name' => 'View Location Record', 'key' => 'view_location_record'],
