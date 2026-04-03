@@ -1,9 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Inventory\app\Http\Controllers\InventoryController;
+use Modules\Inventory\app\Http\Controllers\OpeningStockController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementConversionController;
-use Modules\Inventory\app\Http\Controllers\InventoryController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/unit-of-measurements')->group(function () {
@@ -30,4 +31,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('{id}', [InventoryController::class, 'delete'])->middleware('permission:delete_inventory');
         Route::get('{id}', [InventoryController::class, 'findOrFail'])->middleware('permission:view_inventory');  
     });
+
+    Route::prefix('v1/opening-stocks')->group(function(){
+        Route::get('', [OpeningStockController::class, 'openingStocks'])->middleware('permission:view_opening_stock');
+        Route::post('', [OpeningStockController::class, 'create'])->middleware('permission:create_opening_stock');
+        Route::get('{id}', [OpeningStockController::class, 'findOrFail'])->middleware('permission:view_opening_stock');
+        Route::put('{id}', [OpeningStockController::class, 'update'])->middleware('permission:update_opening_stock');
+        Route::delete('{id}', [OpeningStockController::class, 'delete'])->middleware('permission:delete_opening_stock');
+        Route::patch('{id}/confirm', [OpeningStockController::class, 'confirm'])->middleware('permission:update_opening_stock');
+     });
 });

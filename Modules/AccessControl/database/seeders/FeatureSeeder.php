@@ -174,6 +174,14 @@ class FeatureSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'Opening Stock',
+                'key' => 'opening_stock_feature',
+                'module' => 'Inventory',
+                'description' => 'This is a feature of opening stock',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
         ];
 
         foreach ($features as $feature) {
