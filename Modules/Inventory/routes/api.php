@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Inventory\app\Http\Controllers\InventoryController;
 use Modules\Inventory\app\Http\Controllers\OpeningStockController;
+use Modules\Inventory\app\Http\Controllers\StockTransferController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementConversionController;
 
@@ -40,4 +41,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('{id}', [OpeningStockController::class, 'delete'])->middleware('permission:delete_opening_stock');
         Route::patch('{id}/confirm', [OpeningStockController::class, 'confirm'])->middleware('permission:update_opening_stock');
      });
+
+    Route::prefix('v1/stock-transfers')->group(function(){
+        Route::get('', [StockTransferController::class, 'stockTransfers'])->middleware('permission:view_stock_transfer');
+        Route::post('', [StockTransferController::class, 'create'])->middleware('permission:create_stock_transfer');
+        Route::get('{id}', [StockTransferController::class, 'findOrFail'])->middleware('permission:view_stock_transfer');
+        Route::put('{id}', [StockTransferController::class, 'update'])->middleware('permission:update_stock_transfer');
+        Route::delete('{id}', [StockTransferController::class, 'delete'])->middleware('permission:delete_stock_transfer');
+        Route::patch('{id}/confirm', [StockTransferController::class, 'confirm'])->middleware('permission:update_stock_transfer');
+        Route::patch('{id}/reject', [StockTransferController::class, 'reject'])->middleware('permission:update_stock_transfer');
+    });
+
+        
 });

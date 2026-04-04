@@ -178,6 +178,14 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Update Opening Stock', 'key' => 'update_opening_stock'],
                 ['name' => 'Delete Opening Stock', 'key' => 'delete_opening_stock'],
             ],
+
+            // Stock Transfer
+            'stock_transfer_feature' => [
+                ['name' => 'View Stock Transfer', 'key' => 'view_stock_transfer'],
+                ['name' => 'Create Stock Transfer', 'key' => 'create_stock_transfer'],
+                ['name' => 'Update Stock Transfer', 'key' => 'update_stock_transfer'],
+                ['name' => 'Delete Stock Transfer', 'key' => 'delete_stock_transfer'],
+            ],
             
             // Location
             'location_feature' => [
