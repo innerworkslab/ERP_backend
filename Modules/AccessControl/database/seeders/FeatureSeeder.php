@@ -181,6 +181,14 @@ class FeatureSeeder extends Seeder
                 'description' => 'This is a feature of opening stock',
                 'created_at' => now(),
                 'updated_at' => now(),
+            ],
+            [
+                'name' => 'Stock Transfer',
+                'key' => 'stock_transfer_feature',
+                'module' => 'Inventory',
+                'description' => 'This is a feature of stock transfer',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]
         ];
 

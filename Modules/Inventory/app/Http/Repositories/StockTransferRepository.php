@@ -2,17 +2,17 @@
 
 namespace Modules\Inventory\app\Http\Repositories;
 
-use Modules\Inventory\app\Models\OpeningStock;
-use Modules\Inventory\app\Models\OpeningStockLine;
+use Modules\Inventory\app\Models\StockTransfer;
+use Modules\Inventory\app\Models\StockTransferLine;
 
-class OpeningStockRepository extends BaseRepo
+class StockTransferRepository extends BaseRepo
 {
-    protected $opening_stock_line;
+    protected $stock_transfer_line;
 
-    public function __construct(OpeningStock $model, OpeningStockLine $opening_stock_line)
+    public function __construct(StockTransfer $model, StockTransferLine $stock_transfer_line)
     {
         parent::__construct($model);
-        $this->opening_stock_line = $opening_stock_line;
+        $this->stock_transfer_line = $stock_transfer_line;
     }
 
     public function find($id)
@@ -20,12 +20,14 @@ class OpeningStockRepository extends BaseRepo
         $data = $this->model->find($id);
         if ($data) {
             $data->load([
-                'inventory',
+                'source_inventory',
+                'target_inventory',
                 'lines.product',
-                'lines.unit',
+                'lines.uom',
                 'created_by',
                 'updated_by',
                 'confirmed_by',
+                'rejected_by',
             ]);
         }
 
@@ -34,70 +36,75 @@ class OpeningStockRepository extends BaseRepo
 
     public function create(array $attributes)
     {
-        $openingStock = $this->model->create([
-            'voucher_no' => $attributes['voucher_no'],
-            'voucher_date' => $attributes['voucher_date'],
-            'inventory_id' => $attributes['inventory_id'],
-            'total_amount' => $attributes['total_amount'],
-            'status' => $attributes['status'] ?? 'pending',
+        $stockTransfer = $this->model->create([
+            'reference_id' => $attributes['reference_id'],
+            'transfer_date' => $attributes['transfer_date'],
+            'source_inventory_id' => $attributes['source_inventory_id'],
+            'target_inventory_id' => $attributes['target_inventory_id'],
             'remarks' => $attributes['remarks'] ?? null,
+            'status' => $attributes['status'] ?? 'pending',
             'created_by' => $attributes['created_by'],
         ]);
 
         $lines = $attributes['lines'] ?? [];
 
         foreach ($lines as $line) {
-            $this->opening_stock_line->create([
-                'opening_stock_id' => $openingStock->id,
+            $this->stock_transfer_line->create([
+                'stock_transfer_id' => $stockTransfer->id,
                 'product_id' => $line['product_id'],
                 'quantity' => $line['quantity'],
                 'uom_id' => $line['uom_id'],
-                'purchase_price' => $line['purchase_price'],
-                'subtotal' => $line['subtotal'],
-                'lot_no' => $line['lot_no'] ?? null,
-                'expired_date' => $line['expired_date'] ?? null,
-                'serial_no' => $line['serial_no'] ?? null,
                 'remarks' => $line['remarks'] ?? null,
             ]);
         }
 
-        return $openingStock;
+        return $stockTransfer;
     }
 
     public function updateWithLines(int $id, array $attributes)
     {
-        $openingStock = $this->find($id);
+        $stockTransfer = $this->find($id);
 
-        if (!$openingStock) {
+        if (!$stockTransfer) {
             return null;
         }
 
-        $openingStock->update([
-            'inventory_id' => $attributes['inventory_id'],
-            'total_amount' => $attributes['total_amount'],
-            'status' => $attributes['status'] ?? 'pending',
+        $stockTransfer->update([
+            'transfer_date' => $attributes['transfer_date'],
+            'source_inventory_id' => $attributes['source_inventory_id'],
+            'target_inventory_id' => $attributes['target_inventory_id'],
             'remarks' => $attributes['remarks'] ?? null,
+            'status' => $attributes['status'] ?? 'pending',
             'updated_by' => $attributes['updated_by'],
         ]);
 
-        $this->opening_stock_line->where('opening_stock_id', $openingStock->id)->delete();
+        $this->stock_transfer_line->where('stock_transfer_id', $stockTransfer->id)->delete();
 
         foreach ($attributes['lines'] as $line) {
-            $this->opening_stock_line->create([
-                'opening_stock_id' => $openingStock->id,
+            $this->stock_transfer_line->create([
+                'stock_transfer_id' => $stockTransfer->id,
                 'product_id' => $line['product_id'],
                 'quantity' => $line['quantity'],
                 'uom_id' => $line['uom_id'],
-                'purchase_price' => $line['purchase_price'],
-                'subtotal' => $line['subtotal'],
-                'lot_no' => $line['lot_no'] ?? null,
-                'expired_date' => $line['expired_date'] ?? null,
-                'serial_no' => $line['serial_no'] ?? null,
                 'remarks' => $line['remarks'] ?? null,
             ]);
         }
 
-        return $openingStock;
+        return $stockTransfer;
+    }
+
+    public function delete($id)
+    {
+        $model = $this->find($id);
+
+        if ($model) {
+            $this->stock_transfer_line->where('stock_transfer_id', $model->id)->delete();
+            $model->delete();
+
+            return true;
+        }
+
+        return false;
     }
 
     public function getLastRecord()
