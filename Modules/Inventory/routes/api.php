@@ -6,6 +6,7 @@ use Modules\Inventory\app\Http\Controllers\OpeningStockController;
 use Modules\Inventory\app\Http\Controllers\StockTransferController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementConversionController;
+use Modules\Inventory\app\Http\Controllers\StockMovementController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/unit-of-measurements')->group(function () {
@@ -50,6 +51,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('{id}', [StockTransferController::class, 'delete'])->middleware('permission:delete_stock_transfer');
         Route::patch('{id}/confirm', [StockTransferController::class, 'confirm'])->middleware('permission:update_stock_transfer');
         Route::patch('{id}/reject', [StockTransferController::class, 'reject'])->middleware('permission:update_stock_transfer');
+    });
+
+    Route::prefix('v1/stock-ledgers')->group(function(){
+        Route::get('', [StockMovementController::class, 'index']);
     });
 
         
