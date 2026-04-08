@@ -9,10 +9,12 @@ use Modules\Inventory\app\Http\Repositories\OpeningStockRepository;
 class OpeningStockService
 {
     protected $opening_stock_repository;
+    protected $stock_ledger_service;
 
-    public function __construct(OpeningStockRepository $opening_stock_repository)
+    public function __construct(OpeningStockRepository $opening_stock_repository,StockLedgerService $stock_ledger_service)
     {
         $this->opening_stock_repository = $opening_stock_repository;
+        $this->stock_ledger_service = $stock_ledger_service;
     }
 
     public function getDataWithPagination(
@@ -170,7 +172,41 @@ class OpeningStockService
                     return null;
                 }
 
-                return $this->opening_stock_repository->find($id);
+                $openingStock = $this->opening_stock_repository->find($id);
+
+                if ($openingStock) {
+                    $openingStock->loadMissing(['inventory.branches', 'lines.product', 'lines.unit']);
+
+                    $this->stock_ledger_service->clearByReference(
+                        referenceType: 'opening_stock',
+                        referenceId: null,
+                        voucherNo: $openingStock->voucher_no
+                    );
+
+                    $rows = [];
+
+                    foreach ($openingStock->lines as $line) {
+                        $rows[] = [
+                            'transaction_date' => $openingStock->voucher_date,
+                            'reference_type' => 'opening_stock',
+                            'reference_id' => null,
+                            'voucher_no' => $openingStock->voucher_no,
+                            'product_name' => $line->product->name ?? '-',
+                            'sku' => $line->product->sku ?? '-',
+                            'inventory_name' => $openingStock->inventory->name ?? '-',
+                            'branch_name' => $this->stock_ledger_service->resolveBranchName($openingStock->inventory),
+                            'movement_type' => 'in',
+                            'quantity' => $line->quantity ?? 0,
+                            'UOM' => $line->unit->name ?? '-',
+                            'unit_cost' => $line->purchase_price ?? 0,
+                            'total_cost' => $line->subtotal ?? null,
+                        ];
+                    }
+
+                    $this->stock_ledger_service->addBulkStockLedger($rows);
+                }
+
+                return $openingStock;
             });
         } catch (Exception $e) {
             logger()->error('Error : Failed to confirm opening stock: ' . $e->getMessage());
