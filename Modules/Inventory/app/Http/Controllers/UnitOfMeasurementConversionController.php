@@ -44,7 +44,7 @@ class UnitOfMeasurementConversionController extends Controller
             if (!empty($validated['conversion_unit_id'])) {
                 $conditions['conversion_unit_id'] = $validated['conversion_unit_id'];
             }
-            $with = ['created_by', 'updated_by'];
+            $with = ['created_by', 'updated_by', 'baseUnit', 'conversionUnit'];
             $res_data = $this->uom_conversion_service->getDataWithPagination($per_page, $page, status: $status, with: $with, conditions: $conditions);
             return $this->paginatedSuccessResponse($res_data, 200, 'UOM Conversion Lists');
         } catch (\Exception $e) {
