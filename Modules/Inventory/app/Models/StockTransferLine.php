@@ -21,6 +21,7 @@ class StockTransferLine extends Model
     protected $fillable = [
         'stock_transfer_id',
         'product_id',
+        'lot_no',
         'quantity',
         'uom_id',
         'remarks'

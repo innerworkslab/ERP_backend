@@ -7,6 +7,7 @@ use Modules\Inventory\app\Http\Controllers\StockTransferController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementConversionController;
 use Modules\Inventory\app\Http\Controllers\StockMovementController;
+use Modules\Inventory\app\Http\Controllers\StockBalanceController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/unit-of-measurements')->group(function () {
@@ -54,7 +55,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::prefix('v1/stock-ledgers')->group(function(){
-        Route::get('', [StockMovementController::class, 'index']);
+        Route::get('', [StockMovementController::class, 'index'])->middleware('permission:view_stock_ledger');
+    });
+
+    Route::prefix('v1/stock-balances')->group(function(){
+        Route::get('', [StockBalanceController::class, 'index'])->middleware('permission:view_stock_balace');
+        Route::get('product/{productId}/lots', [StockBalanceController::class, 'lotTotals'])->middleware('permission:view_stock_balace');
     });
 
         

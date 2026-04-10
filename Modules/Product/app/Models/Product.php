@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Inventory\app\Models\ProductLots;
 use Modules\Inventory\app\Models\UnitOfMeasurement;
 use Modules\Organization\app\Models\Currency;
 use Modules\Product\app\Models\Collection;
@@ -110,6 +112,11 @@ class Product extends Model
             ->using(CollectionItem::class)
             ->withPivot(['id', 'product_qty'])
             ->withTimestamps();
+    }
+
+    public function product_lots(): HasMany
+    {
+        return $this->hasMany(ProductLots::class, 'product_id');
     }
 
     // protected static function newFactory(): ProductFactory

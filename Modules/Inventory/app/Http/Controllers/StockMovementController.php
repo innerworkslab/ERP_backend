@@ -45,13 +45,13 @@ class StockMovementController extends Controller
                 $searches['product_search'] = $validated['product_search'];
             }
 
-
-            if (!empty($validated['inventory_name'])) {
-                $searches['inventory_name'] = $validated['inventory_name'];
+            if (!empty($validated['lot_no'])) {
+                $searches['lot_no'] = $validated['lot_no'];
             }
 
-            if (!empty($validated['branch_name'])) {
-                $searches['branch_name'] = $validated['branch_name'];
+
+            if (!empty($validated['inventory_id'])) {
+                $conditions['inventory_id'] = (int) $validated['inventory_id'];
             }
 
             if (!empty($validated['reference_type'])) {

@@ -209,23 +209,24 @@ class StockTransferService
                             'transaction_date' => $stockTransfer->transfer_date,
                             'reference_id' => $stockTransfer->id,
                             'voucher_no' => $stockTransfer->reference_id,
-                            'product_name' => $line->product->name ?? '-',
+                            'product_id' => $line->product_id,
                             'sku' => $line->product->sku ?? '-',
+                            'lot_no' => $line->lot_no ?? null,
                             'quantity' => $line->quantity ?? 0,
-                            'UOM' => $line->uom->name ?? '-',
+                            'uom_id' => $line->uom_id,
                             'unit_cost' => $unitCost,
                         ];
 
                         $rows[] = $base + [
                             'reference_type' => 'transfer_out',
-                            'inventory_name' => $stockTransfer->source_inventory->name ?? '-',
+                            'inventory_id' => $stockTransfer->source_inventory_id,
                             'branch_name' => $this->stock_ledger_service->resolveBranchName($stockTransfer->source_inventory),
                             'movement_type' => 'out',
                         ];
 
                         $rows[] = $base + [
                             'reference_type' => 'transfer_in',
-                            'inventory_name' => $stockTransfer->target_inventory->name ?? '-',
+                            'inventory_id' => $stockTransfer->target_inventory_id,
                             'branch_name' => $this->stock_ledger_service->resolveBranchName($stockTransfer->target_inventory),
                             'movement_type' => 'in',
                         ];

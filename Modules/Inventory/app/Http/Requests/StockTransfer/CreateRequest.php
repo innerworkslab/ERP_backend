@@ -18,6 +18,7 @@ class CreateRequest extends FormRequest
             'remarks' => 'nullable|string',
             'lines' => 'required|array|min:1',
             'lines.*.product_id' => 'required|integer|exists:products,id',
+            'lines.*.lot_no' => 'required|string|max:255',
             'lines.*.quantity' => 'required|numeric|min:0.01',
             'lines.*.uom_id' => 'required|integer|exists:unit_of_measurements,id',
             'lines.*.remarks' => 'nullable|string',

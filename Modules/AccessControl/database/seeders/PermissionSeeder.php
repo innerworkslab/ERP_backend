@@ -186,6 +186,16 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Update Stock Transfer', 'key' => 'update_stock_transfer'],
                 ['name' => 'Delete Stock Transfer', 'key' => 'delete_stock_transfer'],
             ],
+
+            // Stock Ledger
+            'stock_ledger_feature' => [
+                ['name' => 'View Stock Ledger', 'key' => 'view_stock_ledger'],
+            ],
+
+            // Stock Balance
+            'stock_balance_feature' => [
+                ['name' => 'View Stock Balance', 'key' => 'view_stock_balance'],
+            ],
             
             // Location
             'location_feature' => [

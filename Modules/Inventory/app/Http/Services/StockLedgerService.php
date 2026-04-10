@@ -18,7 +18,11 @@ class StockLedgerService
     public function addStockLedger(array $attributes): StockMovement
     {
         $attributes = $this->normalizeAttributes($attributes);
-        $balances = $this->getRunningBalances($attributes['sku'], $attributes['inventory_name']);
+        $balances = $this->getRunningBalances(
+            $attributes['sku'],
+            (int) $attributes['inventory_id'],
+            $attributes['lot_no'] ?? null
+        );
 
         $quantityDelta = (float) $attributes['quantity'];
         $costDelta = (float) $attributes['total_cost'];
@@ -95,14 +99,21 @@ class StockLedgerService
         return $attributes;
     }
 
-    protected function getRunningBalances(string $sku, string $inventoryName): array
+    protected function getRunningBalances(string $sku, int $inventoryId, ?string $lotNo = null): array
     {
-        $movements = $this->stock_movement->newQuery()
+        $query = $this->stock_movement->newQuery()
             ->where('sku', $sku)
-            ->where('inventory_name', $inventoryName)
+            ->where('inventory_id', $inventoryId)
             ->orderBy('transaction_date')
-            ->orderBy('id')
-            ->get(['movement_type', 'quantity', 'total_cost']);
+            ->orderBy('id');
+
+        if ($lotNo !== null && $lotNo !== '') {
+            $query->where('lot_no', $lotNo);
+        } else {
+            $query->whereNull('lot_no');
+        }
+
+        $movements = $query->get(['movement_type', 'quantity', 'total_cost']);
 
         $quantityBefore = 0.0;
         $costBefore = 0.0;

@@ -189,7 +189,23 @@ class FeatureSeeder extends Seeder
                 'description' => 'This is a feature of stock transfer',
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]
+            ],
+            [
+                'name' => 'Stock Ledger',
+                'key' => 'stock_ledger_feature',
+                'module' => 'Inventory',
+                'description' => 'This is a feature of stock ledger',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Stock Balance',
+                'key' => 'stock_balance_feature',
+                'module' => 'Inventory',
+                'description' => 'This is a feature of stock balance',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         foreach ($features as $feature) {

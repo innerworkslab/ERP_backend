@@ -18,8 +18,8 @@ class ListingRequest extends FormRequest
             'reference_type' => 'nullable|string|in:opening_stock,purchase_receive,purchase_return,sale_issue,sale_return,adjustment_in,adjustment_out,damage,transfer_in,transfer_out',
             'reference_id' => 'nullable|integer',
             'product_search' => 'nullable|string|max:255',
-            'inventory_name' => 'nullable|string|max:255',
-            'branch_name' => 'nullable|string|max:255',
+            'lot_no' => 'nullable|string|max:255',
+            'inventory_id' => 'nullable|integer',
             'transaction_date_from' => 'nullable|date',
             'transaction_date_to' => 'nullable|date',
         ];
