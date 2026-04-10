@@ -2,17 +2,21 @@
 
 namespace Modules\Inventory\app\Http\Repositories;
 
+use RuntimeException;
+use Modules\Inventory\app\Models\ProductLots;
 use Modules\Inventory\app\Models\StockTransfer;
 use Modules\Inventory\app\Models\StockTransferLine;
 
 class StockTransferRepository extends BaseRepo
 {
     protected $stock_transfer_line;
+    protected $product_lots;
 
-    public function __construct(StockTransfer $model, StockTransferLine $stock_transfer_line)
+    public function __construct(StockTransfer $model, StockTransferLine $stock_transfer_line, ProductLots $product_lots)
     {
         parent::__construct($model);
         $this->stock_transfer_line = $stock_transfer_line;
+        $this->product_lots = $product_lots;
     }
 
     public function find($id)
@@ -49,9 +53,12 @@ class StockTransferRepository extends BaseRepo
         $lines = $attributes['lines'] ?? [];
 
         foreach ($lines as $line) {
+            $this->assertLotExistsForProduct($line);
+
             $this->stock_transfer_line->create([
                 'stock_transfer_id' => $stockTransfer->id,
                 'product_id' => $line['product_id'],
+                'lot_no' => $line['lot_no'],
                 'quantity' => $line['quantity'],
                 'uom_id' => $line['uom_id'],
                 'remarks' => $line['remarks'] ?? null,
@@ -81,9 +88,12 @@ class StockTransferRepository extends BaseRepo
         $this->stock_transfer_line->where('stock_transfer_id', $stockTransfer->id)->delete();
 
         foreach ($attributes['lines'] as $line) {
+            $this->assertLotExistsForProduct($line);
+
             $this->stock_transfer_line->create([
                 'stock_transfer_id' => $stockTransfer->id,
                 'product_id' => $line['product_id'],
+                'lot_no' => $line['lot_no'],
                 'quantity' => $line['quantity'],
                 'uom_id' => $line['uom_id'],
                 'remarks' => $line['remarks'] ?? null,
@@ -181,4 +191,24 @@ class StockTransferRepository extends BaseRepo
             ],
         ];
     }
+
+    private function assertLotExistsForProduct(array $line): void
+    {
+        $productId = (int) ($line['product_id'] ?? 0);
+        $lotNo = trim((string) ($line['lot_no'] ?? ''));
+
+        if ($productId <= 0 || $lotNo === '') {
+            throw new RuntimeException('Each line requires valid product_id and lot_no.');
+        }
+
+        $exists = $this->product_lots->newQuery()
+            ->where('product_id', $productId)
+            ->where('lot_no', $lotNo)
+            ->exists();
+
+        if (!$exists) {
+            throw new RuntimeException('Lot "' . $lotNo . '" is not registered for the selected product.');
+        }
+    }
+
 }

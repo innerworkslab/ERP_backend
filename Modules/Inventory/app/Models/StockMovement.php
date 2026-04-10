@@ -4,6 +4,7 @@ namespace Modules\Inventory\app\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Inventory\app\Models\UnitOfMeasurement;
 // use Modules\Inventory\Database\Factories\StockMovementFactory;
 
 class StockMovement extends Model
@@ -22,13 +23,13 @@ class StockMovement extends Model
         'reference_type',
         'reference_id',
         'voucher_no',
-        'product_name',
+        'product_id',
         'sku',
-        'inventory_name',
-        'branch_name',
+        'lot_no',
+        'inventory_id',
         'movement_type',
         'quantity',
-        'UOM',
+        'uom_id',
         'unit_cost',
         'total_cost',
         'balance_quantity_before',
@@ -47,6 +48,16 @@ class StockMovement extends Model
         return $this->belongsTo(StockTransfer::class, 'reference_id');
     }
 
+    public function inventory()
+    {
+        return $this->belongsTo(Inventory::class);
+    }
+
+    public function uom()
+    {
+        return $this->belongsTo(UnitOfMeasurement::class);
+    }
+
     public function getFormattedQuantityAttribute()
     {
         $qty = (float) $this->quantity;
@@ -61,13 +72,8 @@ class StockMovement extends Model
     public function resolveReference()
     {
         return match ($this->reference_type) {
-            self::REFERENCE_OPENING_STOCK => OpeningStock::query()
-                ->where('voucher_no', $this->voucher_no)
-                ->first(),
-            self::REFERENCE_TRANSFER_IN,
-            self::REFERENCE_TRANSFER_OUT => $this->reference_id
-                ? StockTransfer::query()->find($this->reference_id)
-                : StockTransfer::query()->where('reference_id', $this->voucher_no)->first(),
+            self::REFERENCE_OPENING_STOCK => OpeningStock::query()->where('voucher_no', $this->voucher_no)->first(),
+            self::REFERENCE_TRANSFER_IN, self::REFERENCE_TRANSFER_OUT => $this->reference_id ? StockTransfer::query()->find($this->reference_id) : StockTransfer::query()->where('reference_id', $this->voucher_no)->first(),
             default => null,
         };
     }

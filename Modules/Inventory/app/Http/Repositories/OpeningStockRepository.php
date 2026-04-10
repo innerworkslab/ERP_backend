@@ -4,15 +4,19 @@ namespace Modules\Inventory\app\Http\Repositories;
 
 use Modules\Inventory\app\Models\OpeningStock;
 use Modules\Inventory\app\Models\OpeningStockLine;
+use Modules\Inventory\app\Models\ProductLots;
+use Modules\Product\app\Models\Product;
 
 class OpeningStockRepository extends BaseRepo
 {
     protected $opening_stock_line;
+    protected $product_lots;
 
-    public function __construct(OpeningStock $model, OpeningStockLine $opening_stock_line)
+    public function __construct(OpeningStock $model, OpeningStockLine $opening_stock_line, ProductLots $product_lots)
     {
         parent::__construct($model);
         $this->opening_stock_line = $opening_stock_line;
+        $this->product_lots = $product_lots;
     }
 
     public function find($id)
@@ -47,6 +51,8 @@ class OpeningStockRepository extends BaseRepo
         $lines = $attributes['lines'] ?? [];
 
         foreach ($lines as $line) {
+            $line['lot_no'] = $this->resolveLotNo($line);
+
             $this->opening_stock_line->create([
                 'opening_stock_id' => $openingStock->id,
                 'product_id' => $line['product_id'],
@@ -59,6 +65,8 @@ class OpeningStockRepository extends BaseRepo
                 'serial_no' => $line['serial_no'] ?? null,
                 'remarks' => $line['remarks'] ?? null,
             ]);
+
+            $this->syncProductLot($line);
         }
 
         return $openingStock;
@@ -83,6 +91,8 @@ class OpeningStockRepository extends BaseRepo
         $this->opening_stock_line->where('opening_stock_id', $openingStock->id)->delete();
 
         foreach ($attributes['lines'] as $line) {
+            $line['lot_no'] = $this->resolveLotNo($line);
+
             $this->opening_stock_line->create([
                 'opening_stock_id' => $openingStock->id,
                 'product_id' => $line['product_id'],
@@ -95,6 +105,8 @@ class OpeningStockRepository extends BaseRepo
                 'serial_no' => $line['serial_no'] ?? null,
                 'remarks' => $line['remarks'] ?? null,
             ]);
+
+            $this->syncProductLot($line);
         }
 
         return $openingStock;
@@ -173,5 +185,65 @@ class OpeningStockRepository extends BaseRepo
                 'total_pages' => $totalPages,
             ],
         ];
+    }
+
+    private function syncProductLot(array $line): void
+    {
+        if (empty($line['lot_no']) || empty($line['product_id'])) {
+            return;
+        }
+
+        $lot = $this->product_lots->newQuery()->firstOrCreate(
+            [
+                'product_id' => $line['product_id'],
+                'lot_no' => $line['lot_no'],
+            ],
+            [
+                'expired_date' => $line['expired_date'] ?? null,
+                'serial_no' => $line['serial_no'] ?? null,
+            ]
+        );
+
+        $lot->update([
+            'expired_date' => $line['expired_date'] ?? $lot->expired_date,
+            'serial_no' => $line['serial_no'] ?? $lot->serial_no,
+        ]);
+    }
+    //format LOT-{SKU}_XX where XX is a sequential number for each product's lot
+    private function resolveLotNo(array $line): ?string
+    {
+        $providedLotNo = trim((string) ($line['lot_no'] ?? ''));
+        if ($providedLotNo !== '') {
+            return $providedLotNo;
+        }
+
+        $productId = (int) ($line['product_id'] ?? 0);
+        if ($productId <= 0) {
+            return null;
+        }
+
+        $product = Product::query()->find($productId, ['id', 'sku']);
+        $sku = trim((string) ($product->sku ?? ''));
+        if ($sku === '') {
+            return null;
+        }
+
+        $prefix = 'LOT-' . $sku . '_';
+        $lotNos = $this->product_lots->newQuery()
+            ->where('product_id', $productId)
+            ->where('lot_no', 'LIKE', $prefix . '%')
+            ->pluck('lot_no');
+
+        $maxSequence = 0;
+        foreach ($lotNos as $lotNo) {
+            if (preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/', (string) $lotNo, $matches)) {
+                $sequence = (int) $matches[1];
+                if ($sequence > $maxSequence) {
+                    $maxSequence = $sequence;
+                }
+            }
+        }
+
+        return $prefix . str_pad((string) ($maxSequence + 1), 2, '0', STR_PAD_LEFT);
     }
 }

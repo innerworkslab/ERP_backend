@@ -24,21 +24,27 @@ class StockMovementRepository extends BaseRepo
         $status = null
     ) {
         $query = DB::table('stock_movements as sm')
+            ->leftJoin('inventories as i', 'i.id', '=', 'sm.inventory_id')
+            ->leftJoin('products as p', 'p.id', '=', 'sm.product_id')
+            ->leftJoin('unit_of_measurements as uom', 'uom.id', '=', 'sm.uom_id')
             ->selectRaw("sm.id,
                 sm.transaction_date,
                 sm.reference_type,
                 sm.reference_id,
                 sm.voucher_no,
-                sm.product_name,
+                sm.product_id,
+                COALESCE(p.name, '-') as product_name,
                 sm.sku,
-                sm.inventory_name,
-                sm.branch_name,
+                sm.lot_no,
+                sm.inventory_id,
+                COALESCE(i.name, '-') as inventory_name,
                 sm.movement_type,
                 CASE
                     WHEN sm.quantity > 0 THEN CONCAT('+', CAST(sm.quantity AS CHAR))
                     ELSE CAST(sm.quantity AS CHAR)
                 END AS quantity,
-                sm.UOM,
+                sm.uom_id,
+                COALESCE(uom.name, '-') as UOM,
                 sm.unit_cost,
                 sm.total_cost,
                 sm.balance_quantity_before,
@@ -59,13 +65,27 @@ class StockMovementRepository extends BaseRepo
                 }
 
                 foreach ($searches as $column => $value) {
-                    if (!in_array($column, ['voucher_no', 'product_name', 'sku', 'inventory_name', 'branch_name'], true)) {
+                    if (!in_array($column, ['voucher_no', 'product_name', 'sku', 'lot_no', 'inventory_name'], true)) {
+                        continue;
+                    }
+
+                    if ($column === 'inventory_name') {
+                        $q->orWhere('i.name', 'LIKE', '%' . $value . '%');
+                        continue;
+                    }
+
+                    if ($column === 'product_name') {
+                        $q->orWhere('p.name', 'LIKE', '%' . $value . '%');
                         continue;
                     }
 
                     $q->orWhere('sm.' . $column, 'LIKE', '%' . $value . '%');
                 }
             });
+        }
+
+        if (!empty($conditions['inventory_id'])) {
+            $query->where('sm.inventory_id', $conditions['inventory_id']);
         }
 
         if (!empty($conditions['reference_type'])) {
