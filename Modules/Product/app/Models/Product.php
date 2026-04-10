@@ -29,6 +29,7 @@ class Product extends Model
         'category_id',
         'brand_id',
         'alert_quantity',
+        'stock_uom_id',
         'purchase_price',
         'purchase_currency_id',
         'purchase_tax_id',
@@ -86,6 +87,11 @@ class Product extends Model
     public function sale_uom(): BelongsTo
     {
         return $this->belongsTo(UnitOfMeasurement::class, 'sale_uom_id');
+    }
+
+    public function stock_uom(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasurement::class, 'stock_uom_id');
     }
 
     public function created_by(): BelongsTo

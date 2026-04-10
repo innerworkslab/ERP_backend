@@ -19,6 +19,7 @@ class UpdateProduct extends FormRequest
             'category_id' => 'required|integer|exists:categories,id',
             'brand_id' => 'required|integer|exists:brands,id',
             'alert_quantity' => 'nullable|numeric|min:0',
+            'stock_uom_id' => 'nullable|integer|exists:unit_of_measurements,id',
             'purchase_price' => 'nullable|numeric|min:0',
             'purchase_currency_id' => 'required|integer|exists:currencies,id',
             'purchase_tax_id' => 'nullable|integer|exists:taxs,id',
