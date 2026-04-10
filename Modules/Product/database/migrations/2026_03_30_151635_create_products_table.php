@@ -21,6 +21,7 @@ return new class extends Migration
             $table->unsignedBigInteger('category_id')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->decimal('alert_quantity', 10, 2)->default(0);
+            $table->unsignedBigInteger('stock_uom_id')->nullable();
             
             //purchase
             $table->decimal('purchase_price', 10, 2)->default(0);

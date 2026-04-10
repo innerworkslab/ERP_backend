@@ -62,6 +62,7 @@ class ProductController extends Controller
                 'category',
                 'brand',
                 'origin_country',
+                'stock_uom',
                 'purchase_currency',
                 'purchase_tax',
                 'purchase_uom',

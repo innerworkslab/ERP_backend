@@ -19,6 +19,7 @@ class ProductRepository extends BaseRepo
                 'category',
                 'brand',
                 'origin_country',
+                'stock_uom',
                 'purchase_currency',
                 'purchase_tax',
                 'purchase_uom',
