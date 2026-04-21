@@ -59,8 +59,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::prefix('v1/stock-balances')->group(function(){
-        Route::get('', [StockBalanceController::class, 'index'])->middleware('permission:view_stock_balace');
-        Route::get('product/{productId}/lots', [StockBalanceController::class, 'lotTotals'])->middleware('permission:view_stock_balace');
+        Route::get('', [StockBalanceController::class, 'index'])->middleware('permission:view_stock_balance');
+        Route::get('product/{productId}/lots', [StockBalanceController::class, 'lotTotals'])->middleware('permission:view_stock_balance');
     });
 
         
