@@ -14,8 +14,6 @@ class UpdateProduct extends FormRequest
             'name' => 'required|string|max:255',
             'sku' => 'required|string|max:255|unique:products,sku,' . $id,
             'image' => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:5120',
-            'image_path' => 'prohibited',
-            'image_url' => 'prohibited',
             'category_id' => 'required|integer|exists:categories,id',
             'brand_id' => 'required|integer|exists:brands,id',
             'alert_quantity' => 'nullable|numeric|min:0',
