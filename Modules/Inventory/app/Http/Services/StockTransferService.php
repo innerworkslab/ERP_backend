@@ -10,14 +10,17 @@ class StockTransferService
 {
     protected $stock_transfer_repository;
     protected $stock_ledger_service;
+    protected $uom_conversion_service;
 
     public function __construct(
         StockTransferRepository $stock_transfer_repository,
-        StockLedgerService $stock_ledger_service
+        StockLedgerService $stock_ledger_service,
+        UOMConversionService $uom_conversion_service
     )
     {
         $this->stock_transfer_repository = $stock_transfer_repository;
         $this->stock_ledger_service = $stock_ledger_service;
+        $this->uom_conversion_service = $uom_conversion_service;
     }
 
     public function getDataWithPagination(
@@ -203,7 +206,41 @@ class StockTransferService
                     $rows = [];
 
                     foreach ($stockTransfer->lines as $line) {
-                        $unitCost = (float) ($line->product->purchase_price ?? 0);
+                        // Get the product's stock UOM
+                        $stockUomId = (int) ($line->product->stock_uom_id ?? $line->uom_id);
+                        $transferUomId = (int) $line->uom_id;
+                        $transferQuantity = (float) $line->quantity;
+                        
+                        // Convert the quantity from transfer UOM to stock UOM
+                        $stockQuantity = $this->uom_conversion_service->convertToBaseUom(
+                            $transferQuantity,
+                            $transferUomId,
+                            $stockUomId
+                        );
+
+                        // Get the current balance for this product in source inventory to calculate actual unit cost
+                        $currentBalance = $this->stock_ledger_service->getRunningBalances(
+                            $line->product->sku,
+                            (int) $stockTransfer->source_inventory_id,
+                            $line->lot_no ?? null
+                        );
+
+                        // Calculate actual unit cost from current balance
+                        // If there's quantity in the balance, use the average cost
+                        // Otherwise, use the product's purchase price as fallback
+                        $quantityBefore = (float) $currentBalance['quantity_before'];
+                        $costBefore = (float) $currentBalance['cost_before'];
+                        
+                        if ($quantityBefore > 0) {
+                            // Average cost = total cost / total quantity
+                            $unitCost = $costBefore / $quantityBefore;
+                        } else {
+                            // Fallback to purchase price if no balance
+                            $unitCost = (float) ($line->product->purchase_price ?? 0);
+                        }
+
+                        // Calculate total cost: quantity in stock UOM * actual unit cost
+                        $totalCost = $stockQuantity * $unitCost;
 
                         $base = [
                             'transaction_date' => $stockTransfer->transfer_date,
@@ -212,9 +249,10 @@ class StockTransferService
                             'product_id' => $line->product_id,
                             'sku' => $line->product->sku ?? '-',
                             'lot_no' => $line->lot_no ?? null,
-                            'quantity' => $line->quantity ?? 0,
-                            'uom_id' => $line->uom_id,
+                            'quantity' => $stockQuantity,
+                            'uom_id' => $stockUomId,
                             'unit_cost' => $unitCost,
+                            'total_cost' => $totalCost,
                         ];
 
                         $rows[] = $base + [

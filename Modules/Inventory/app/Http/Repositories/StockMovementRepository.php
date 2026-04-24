@@ -122,7 +122,6 @@ class StockMovementRepository extends BaseRepo
         $orderColumn = $sortableColumns[$orderBy] ?? 'sm.transaction_date';
 
         $results = $query
-            ->orderBy($orderColumn, 'desc')
             ->orderBy('sm.id', 'desc')
             ->forPage($page, $perPage)
             ->get();

@@ -99,7 +99,7 @@ class StockLedgerService
         return $attributes;
     }
 
-    protected function getRunningBalances(string $sku, int $inventoryId, ?string $lotNo = null): array
+    public function getRunningBalances(string $sku, int $inventoryId, ?string $lotNo = null): array
     {
         $query = $this->stock_movement->newQuery()
             ->where('sku', $sku)
