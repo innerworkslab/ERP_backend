@@ -11,6 +11,7 @@ use Modules\Location\database\seeders\StateSeeder;
 use Modules\Organization\database\seeders\OrganizationDatabaseSeeder;
 use Modules\PriceGroup\database\seeders\PriceGroupDatabaseSeeder;
 use Modules\Stakeholder\database\seeders\StakeholderDatabaseSeeder;
+use Modules\Staff\database\seeders\StaffDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -33,6 +34,7 @@ class DatabaseSeeder extends Seeder
             StakeholderDatabaseSeeder::class,
             OrganizationDatabaseSeeder::class,
             PriceGroupDatabaseSeeder::class,
+            StaffDatabaseSeeder::class,
             StateSeeder::class,
             CitySeeder::class
         ]);

@@ -17,7 +17,7 @@ class StaffRepository extends BaseRepo
         return $this->model
             ->with([
                 'role',
-                'branch',
+                'branches',
                 'department',
                 'permissions',
                 'permissions.feature',
@@ -29,6 +29,11 @@ class StaffRepository extends BaseRepo
                 'staffAuthorizedFeatures.assignedBy',
             ])
             ->find($id);
+    }
+
+    public function syncBranches(User $staff, array $branchIds): void
+    {
+        $staff->branches()->sync($branchIds);
     }
 
     public function toggleActive(User $staff): void

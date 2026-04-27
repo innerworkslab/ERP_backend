@@ -17,17 +17,17 @@ return new class extends Migration {
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('phone_number')->unique();
+            //nrc
+            $table->unsignedTinyInteger('nrc_code');
+            $table->unsignedBigInteger('township_code');
+            $table->string('nrc_type', 1);
+            $table->string('id_number', 10);
 
-            $table->string('password');
+            $table->string('password')->nullable();
 
             $table->foreignId('role_id')
                 ->constrained()
                 ->cascadeOnDelete();
-
-            $table->foreignId('branch_id')
-                ->nullable()
-                ->constrained()
-                ->nullOnDelete();
 
             $table->foreignId('department_id')
                 ->nullable()
@@ -37,6 +37,7 @@ return new class extends Migration {
             $table->enum('status', ['active', 'inactive']);
 
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
