@@ -3,7 +3,6 @@
 namespace Modules\PriceGroup\app\Http\Requests\SellingPriceGroup;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class CreateRequest extends FormRequest
 {
@@ -17,7 +16,8 @@ class CreateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:150', 'unique:selling_price_groups,name'],
             'customer_type_id' => ['nullable', 'integer', 'exists:customer_types,id'],
-            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            'branch_id' => ['required', 'array'],
+            'branch_id.*' => ['integer', 'exists:branches,id'],
         ];
     }
 }

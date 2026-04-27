@@ -23,28 +23,33 @@ class SellingPriceGroupSeeder extends Seeder
             [
                 'name' => 'Default Selling Price',
                 'customer_type_id' => null,
-                'branch_id' => null,
+                'branch_id' => [],
                 'status' => 'active',
             ],
             [
                 'name' => 'Retail Selling Price',
                 'customer_type_id' => $retailCustomerTypeId,
-                'branch_id' => null,
+                'branch_id' => [],
                 'status' => 'active',
             ],
             [
                 'name' => 'Branch Special Selling Price',
                 'customer_type_id' => null,
-                'branch_id' => $firstBranchId,
+                'branch_id' => $firstBranchId ? [$firstBranchId] : [],
                 'status' => 'active',
             ],
         ];
 
         foreach ($sellingPriceGroups as $sellingPriceGroup) {
-            SellingPriceGroup::updateOrCreate(
+            $branchIds = $sellingPriceGroup['branch_id'] ?? [];
+            unset($sellingPriceGroup['branch_id']);
+
+            $model = SellingPriceGroup::updateOrCreate(
                 ['name' => $sellingPriceGroup['name']],
                 $sellingPriceGroup
             );
+
+            $model->branches()->sync($branchIds);
         }
     }
 }

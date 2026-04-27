@@ -3,6 +3,7 @@
 namespace Modules\PriceGroup\app\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Organization\app\Models\Branch;
 use Modules\Stakeholder\app\Models\CustomerType;
@@ -14,7 +15,6 @@ class SellingPriceGroup extends Model
     protected $fillable = [
         'name',
         'customer_type_id',
-        'branch_id',
         'status',
     ];
 
@@ -27,8 +27,9 @@ class SellingPriceGroup extends Model
         return $this->belongsTo(CustomerType::class, 'customer_type_id');
     }
 
-    public function branch(): BelongsTo
+    public function branches(): BelongsToMany
     {
-        return $this->belongsTo(Branch::class, 'branch_id');
+        return $this->belongsToMany(Branch::class, 'selling_price_group_branch')
+            ->withTimestamps();
     }
 }
