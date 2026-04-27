@@ -3,6 +3,7 @@
 namespace Modules\Staff\app\Http\Requests\Staff;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateRequest extends FormRequest
 {
@@ -17,11 +18,30 @@ class CreateRequest extends FormRequest
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'phone_number' => 'required|string|max:50|unique:users,phone_number',
-            'password' => 'required|string|min:8',
             'role_id' => 'required|exists:roles,id',
-            'branch_id' => 'nullable|exists:branches,id',
+            'branch_id' => 'required|array',
+            'branch_id.*' => 'integer|exists:branches,id',
             'department_id' => 'required|exists:departments,id',
             'status' => 'required|in:active,inactive',
+            'nrc_code' => 'required|integer|between:1,14',
+            'township_code' => [
+                'required',
+                'integer',
+                Rule::exists('nrc_townships', 'id')->where(function ($query) {
+                    return $query->where('nrc_code', (string) request('nrc_code'));
+                }),
+            ],
+            'nrc_type' => 'required|in:N,E,P,T,Y',
+            'id_number' => [
+                'required',
+                'string',
+                'max:10',
+                Rule::unique('users', 'id_number')->where(function ($query) {
+                    return $query->where('nrc_code', request('nrc_code'))
+                        ->where('township_code', request('township_code'))
+                        ->where('nrc_type', request('nrc_type'));
+                }),
+            ],
 
             'personal_information' => 'required|array',
             'personal_information.date_of_birth' => 'nullable|date',
@@ -55,6 +75,8 @@ class CreateRequest extends FormRequest
 
             'permission_ids' => 'nullable|array',
             'permission_ids.*' => 'required_with:permission_ids|integer|exists:permissions,id|distinct',
+
+            'password' => 'required_with:permission_ids|string|min:8',
         ];
     }
 

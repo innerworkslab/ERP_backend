@@ -32,9 +32,12 @@ class User extends Authenticatable
         'name',
         'email',
         'phone_number',
+        'nrc_code',
+        'township_code',
+        'nrc_type',
+        'id_number',
         'password',
         'role_id',
-        'branch_id',
         'department_id',
         'status'
     ];
@@ -82,6 +85,12 @@ class User extends Authenticatable
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class, 'staff_branch', 'staff_id', 'branch_id')
+            ->withTimestamps();
     }
 
     public function department()

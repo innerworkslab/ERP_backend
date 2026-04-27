@@ -57,7 +57,7 @@ class StaffController extends Controller
 
             $with = [
                 'role',
-                'branch',
+                'branches',
                 'department',
                 'permissions',
                 'permissions.feature',
@@ -90,6 +90,7 @@ class StaffController extends Controller
                 return $this->validationErrorResponse($validator);
             }
             $validated = $request->validated();
+            // dd($validated);
             $result = $this->staff_service->create($validated);
 
             logger()->info('Staff onboarding completed', [

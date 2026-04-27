@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\AccessControl\app\Models\Feature;
 use Modules\AccessControl\app\Models\Permission;
@@ -16,6 +17,7 @@ use Modules\Staff\app\Models\StaffAuthorizedFeature;
 use Modules\Staff\app\Models\StaffBankingInformation;
 use Modules\Staff\app\Models\StaffEmploymentInformation;
 use Modules\Staff\app\Models\StaffFeatureRecommendationRule;
+use Modules\Staff\app\Models\NrcTownship;
 use Modules\Staff\app\Models\StaffPersonalInformation;
 
 class StaffService
@@ -70,6 +72,9 @@ class StaffService
     {
         DB::beginTransaction();
         try {
+            $branchIds = $this->extractBranchIds($attributes);
+            unset($attributes['branch_id']);
+
             $personalInformation = Arr::pull($attributes, 'personal_information', []);
             $personalInformation = $this->preparePersonalInformationImages($personalInformation);
             $employmentInformation = Arr::pull($attributes, 'employment_information', []);
@@ -78,6 +83,7 @@ class StaffService
             $manualPermissionIds = Arr::pull($attributes, 'permission_ids', []);
 
             $staff = $this->staff_repository->create($attributes);
+            $this->staff_repository->syncBranches($staff, $branchIds);
 
             $this->syncUserPermissions(
                 staffId: (int) $staff->id,
@@ -95,6 +101,12 @@ class StaffService
             );
 
             $personalInformation['user_id'] = $staff->id;
+            $personalInformation['nrc_number'] = $this->formatNrcNumber(
+                (int) $staff->nrc_code,
+                (int) $staff->township_code,
+                (string) $staff->nrc_type,
+                (string) $staff->id_number
+            );
             StaffPersonalInformation::updateOrCreate(
                 ['user_id' => $staff->id],
                 $personalInformation
@@ -138,6 +150,9 @@ class StaffService
 
             $filesToDelete = [];
             $existingPersonalInformation = $staff->staffPersonalInformation;
+            $hasBranchPayload = array_key_exists('branch_id', $attributes);
+            $branchIds = $this->extractBranchIds($attributes);
+            unset($attributes['branch_id']);
 
             $personalInformation = Arr::pull($attributes, 'personal_information', []);
             $personalInformation = $this->preparePersonalInformationImages($personalInformation);
@@ -169,6 +184,9 @@ class StaffService
             unset($attributes['password']);
 
             $this->staff_repository->update($id, $attributes);
+            if ($hasBranchPayload) {
+                $this->staff_repository->syncBranches($staff, $branchIds);
+            }
 
             $oldRoleId = (int) $staff->role_id;
             $roleId = (int) ($attributes['role_id'] ?? $staff->role_id);
@@ -190,6 +208,12 @@ class StaffService
             );
 
             $personalInformation['user_id'] = $id;
+            $personalInformation['nrc_number'] = $this->formatNrcNumber(
+                (int) ($attributes['nrc_code'] ?? $staff->nrc_code),
+                (int) ($attributes['township_code'] ?? $staff->township_code),
+                (string) ($attributes['nrc_type'] ?? $staff->nrc_type),
+                (string) ($attributes['id_number'] ?? $staff->id_number)
+            );
             StaffPersonalInformation::updateOrCreate(
                 ['user_id' => $id],
                 $personalInformation
@@ -620,5 +644,35 @@ class StaffService
                 'assigned_date' => now(),
             ]);
         }
+    }
+
+    private function extractBranchIds(array $attributes): array
+    {
+        if (!array_key_exists('branch_id', $attributes)) {
+            return [];
+        }
+
+        if (is_array($attributes['branch_id'])) {
+            return array_values(array_unique(array_filter(
+                array_map('intval', $attributes['branch_id']),
+                static fn (int $branchId): bool => $branchId > 0
+            )));
+        }
+
+        if (!is_null($attributes['branch_id'])) {
+            return [(int) $attributes['branch_id']];
+        }
+
+        return [];
+    }
+
+    private function formatNrcNumber(int $nrcCode, int $townshipId, string $nrcType, string $idNumber): string
+    {
+        $townshipCode = NrcTownship::query()
+            ->where('id', $townshipId)
+            ->where('nrc_code', (string) $nrcCode)
+            ->value('name_en');
+
+        return $nrcCode . '/' . Str::upper((string) ($townshipCode ?? $townshipId)) . '(' . Str::upper($nrcType) . ')' . $idNumber;
     }
 }   

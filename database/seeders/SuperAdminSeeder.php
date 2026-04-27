@@ -32,9 +32,12 @@ class SuperAdminSeeder extends Seeder
             'name' => 'Super Admin',
             'phone_number' => '09123456789',
             'email'=> 'superadmin@example.com',
+            'nrc_code' => 13,
+            'township_code' => 2215,
+            'nrc_type' => 'N',
+            'id_number' => '000000001',
             'password' => 'password123',
             'role_id' => $role->id,
-            'branch_id' => null,
             'department_id' => null,
             'status' => 'active'
         ]);

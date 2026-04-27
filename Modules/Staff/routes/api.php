@@ -2,9 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Staff\app\Http\Controllers\FeatureRecommendationRuleController;
+use Modules\Staff\app\Http\Controllers\Nrc\NrcController;
 use Modules\Staff\app\Http\Controllers\StaffController;
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
+    Route::get('nrc/{nrc_code}/township-code', [NrcController::class, 'getTownshipCodesByNrcCode']);
+
     Route::prefix('staffs')->group(function () {
         Route::get('/feature-suggestions', [StaffController::class, 'featureSuggestions'])->middleware('permission:view_user');
         Route::get('/', [StaffController::class, 'index'])->middleware('permission:view_user');
@@ -23,4 +26,6 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
         Route::post('/{id}', [FeatureRecommendationRuleController::class, 'update'])->middleware('permission:update_feature_recommendation_rule');
         Route::delete('/{id}', [FeatureRecommendationRuleController::class, 'destroy'])->middleware('permission:delete_feature_recommendation_rule');
     });
+
+    
 });
