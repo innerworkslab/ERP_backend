@@ -26,7 +26,7 @@ class ListingRequest extends FormRequest
             'per_page' => 'integer',
             'search'=> 'string',
             'parent_role_id' => 'integer|exists:roles,id',
-            'branch_id' => 'integer|exists:branches,id',
+            // 'branch_id' => 'integer|exists:branches,id',
             'department_id' => 'integer|exists:departments,id',
             'status' => 'string|in:active,inactive'
         ];

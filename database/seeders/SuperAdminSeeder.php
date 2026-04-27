@@ -18,7 +18,7 @@ class SuperAdminSeeder extends Seeder
         $role = Role::create([
             'name' => 'Super Admin',
             // 'is_super' => true,
-            'branch_id' => null,
+            // 'branch_id' => null,
             'department_id' => null,
             'status' => 'active'
         ]);

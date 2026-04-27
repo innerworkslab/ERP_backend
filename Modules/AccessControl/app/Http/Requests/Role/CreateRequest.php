@@ -28,8 +28,7 @@ class CreateRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('roles')->where(function ($query) {
-                    return $query->where('branch_id', $this->branch_id)
-                                 ->where('department_id', $this->department_id);
+                    return $query->where('department_id', $this->department_id);
                 }),
             ],
 
@@ -37,7 +36,7 @@ class CreateRequest extends FormRequest
 
             'parent_role_id' => 'nullable|integer|exists:roles,id',
 
-            'branch_id' => 'required|integer|exists:branches,id',
+            // 'branch_id' => 'required|integer|exists:branches,id',
 
             'department_id' => 'required|integer|exists:departments,id',
         ];

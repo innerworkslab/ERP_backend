@@ -20,10 +20,10 @@ return new class extends Migration {
                 ->constrained('roles')
                 ->nullOnDelete();
 
-            $table->foreignId('branch_id')
-                ->nullable()
-                ->constrained()
-                ->nullOnDelete();
+            // $table->foreignId('branch_id')
+            //     ->nullable()
+            //     ->constrained()
+            //     ->nullOnDelete();
 
             $table->foreignId('department_id')
                 ->nullable()
@@ -36,7 +36,7 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            $table->unique(['name', 'branch_id', 'department_id'], 'roles_name_branch_department_unique');
+            $table->unique(['name', 'department_id'], 'roles_name_department_unique');
         });
     }
 
