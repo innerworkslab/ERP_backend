@@ -42,10 +42,10 @@ class BranchController extends Controller
                 $searches = [
                     'name' => $search,
                     'prefix' => $search,
-                    'mobile' => $search,
-                    'alternate_phone' => $search,
+                    'mobile_phones' => $search,
                     'email' => $search,
                     'website' => $search,
+                    'facebook' => $search
                 ];
 
                 // if (in_array(strtolower($search), ['active', 'inactive'])) {
@@ -62,7 +62,7 @@ class BranchController extends Controller
             if (!empty($validated['city_id'])) {
                 $conditions['city_id'] = $validated['city_id'];
             }
-            $with = ['created_by', 'updated_by', 'state', 'city', 'priceGroup'];
+            $with = ['created_by', 'updated_by', 'state', 'city'];
             $res_data = $this->branch_service->getDataWithPagination($per_page, $page, status: $status, searches: $searches, with: $with, conditions: $conditions);
             return $this->paginatedSuccessResponse($res_data, 200, 'Branch Lists');
         } catch (\Exception $e) {

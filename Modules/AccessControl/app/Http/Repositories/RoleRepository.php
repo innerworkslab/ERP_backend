@@ -28,7 +28,7 @@ class RoleRepository extends BaseRepo
     {
         $data = $this->model->find($id);
         if ($data) {
-            $data->load(['parentRole', 'children', 'branch', 'department', 'features', 'created_by', 'updated_by']);
+            $data->load(['parentRole', 'children', 'department', 'features', 'created_by', 'updated_by']);
         }
         return $data;
     }

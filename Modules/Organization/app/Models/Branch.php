@@ -20,18 +20,22 @@ class Branch extends Model
     protected $fillable = [
         'prefix',
         'name',
+        'address',
         'latitude',
         'longitude',
         'city_id',
         'state_id',
-        'mobile',
-        'alternate_phone',
+        'mobile_phones',
         'email',
         'website',
-        'default_selling_price_group_id',
+        'facebook',
         'status',
         'created_by',
         'updated_by'
+    ];
+
+    protected $casts = [
+        'mobile_phones' => 'array',
     ];
 
     public function toArray()
@@ -51,15 +55,15 @@ class Branch extends Model
         return $attributes;
     }
 
-    public function departments()
-    {
-        return $this->hasMany(Department::class);
-    }
+    // public function departments()
+    // {
+    //     return $this->hasMany(Department::class);
+    // }
 
-    public function roles()
-    {
-        return $this->hasMany(Role::class);
-    }
+    // public function roles()
+    // {
+    //     return $this->hasMany(Role::class);
+    // }
 
     public function users()
     {
@@ -84,13 +88,5 @@ class Branch extends Model
     public function state()
     {
         return $this->belongsTo(State::class);
-    }
-
-    public function priceGroup()
-    {
-        return $this->belongsTo(
-            SellingPriceGroup::class,
-            'default_selling_price_group_id'
-        );
     }
 }

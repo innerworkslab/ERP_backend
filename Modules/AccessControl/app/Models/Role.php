@@ -17,7 +17,7 @@ class Role extends Model
     protected $fillable = [
         'name',
         'parent_role_id',
-        'branch_id',
+        // 'branch_id',
         'department_id',
         // 'is_super',
         'status',
@@ -47,10 +47,10 @@ class Role extends Model
         return $this->hasMany(Role::class, 'parent_role_id');
     }
 
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class);
-    }
+    // public function branch()
+    // {
+    //     return $this->belongsTo(Branch::class);
+    // }
 
     public function department()
     {

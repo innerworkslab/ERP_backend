@@ -57,15 +57,15 @@ class RoleController extends Controller
                 $conditions['parent_role_id'] = $validated['parent_role_id'];
             }
 
-            if (!empty($validated['branch_id'])) {
-                $conditions['branch_id'] = $validated['branch_id'];
-            }
+            // if (!empty($validated['branch_id'])) {
+            //     $conditions['branch_id'] = $validated['branch_id'];
+            // }
 
             if (!empty($validated['department_id'])) {
                 $conditions['department_id'] = $validated['department_id'];
             }
 
-            $with = ['parentRole', 'children', 'branch', 'department', 'features', 'created_by', 'updated_by'];
+            $with = ['parentRole', 'children', 'department', 'features', 'created_by', 'updated_by'];
             $res_data = $this->role_service->getDataWithPagination($per_page, $page, status: $status, searches: $searches, with: $with, conditions: $conditions);
             return $this->paginatedSuccessResponse($res_data, 200, 'Role Lists');
         } catch (\Exception $e) {
@@ -195,7 +195,7 @@ class RoleController extends Controller
                 $conditions['status'] = $validated['status'];
             }
 
-            $with = ['branch', 'department'];
+            $with = ['department'];
             $res_data = $this->role_service->getRolesWithoutPagination(status: $status, searches: $searches, with: $with, conditions: $conditions);
             return $this->successResponse($res_data, 200, 'Role Lists Without Pagination');
         } catch (\Exception $e) {
