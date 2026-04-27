@@ -15,14 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('name', 150)->unique();
             $table->unsignedBigInteger('customer_type_id')->nullable();
-            $table->unsignedBigInteger('branch_id')->nullable();
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
 
             $table->foreign('customer_type_id')->references('id')->on('customer_types')->onDelete('set null');
-            $table->foreign('branch_id')->references('id')->on('branches')->onDelete('set null');
-
-            $table->unique(['name','customer_type_id', 'branch_id']);
         });
     }
 

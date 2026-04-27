@@ -16,9 +16,19 @@ class SellingPriceGroupRepository extends BaseRepo
     {
         $data = $this->model->find($id);
         if ($data) {
-            $data->load(['customer_type', 'branch']);
+            $data->load(['customer_type', 'branches']);
         }
         return $data;
+    }
+
+    public function syncBranches(SellingPriceGroup $sellingPriceGroup, array $branchIds = []): void
+    {
+        $branchIds = array_values(array_unique(array_filter(
+            array_map('intval', $branchIds),
+            static fn (int $branchId): bool => $branchId > 0
+        )));
+
+        $sellingPriceGroup->branches()->sync($branchIds);
     }
 
     public function toggleActive(SellingPriceGroup $sellingPriceGroup): void

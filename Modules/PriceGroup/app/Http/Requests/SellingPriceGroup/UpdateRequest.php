@@ -25,7 +25,8 @@ class UpdateRequest extends FormRequest
                 Rule::unique('selling_price_groups', 'name')->ignore($id),
             ],
             'customer_type_id' => ['sometimes', 'nullable', 'integer', 'exists:customer_types,id'],
-            'branch_id' => ['sometimes', 'nullable', 'integer', 'exists:branches,id'],
+            'branch_id' => ['sometimes', 'nullable', 'array'],
+            'branch_id.*' => ['integer', 'exists:branches,id'],
         ];
     }
 }
