@@ -112,7 +112,6 @@ class FeatureRepository extends BaseRepo
         if ($data) {
             $data->load([
                 'roles',
-                'roles.branch',
                 'roles.department',
                 'permissions',
             ]);
