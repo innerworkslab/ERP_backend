@@ -66,7 +66,6 @@ class FeatureController extends Controller
 
             $with = [
                 'roles',
-                'roles.branch',
                 'roles.department',
                 'permissions',
             ];
