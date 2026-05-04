@@ -13,6 +13,21 @@ class VariationRepository extends BaseRepo
         parent::__construct($model);
     }
 
+    public function create($data)
+    {
+        $result = $this->model->create($data);
+        $result->productCategories()->sync($data['product_category_ids']);
+        return $result;
+    }
+
+    public function update($id, array $data)
+    {
+        $variation = $this->model->find($id);
+        $variation->update($data);
+        $variation->productCategories()->sync($data['product_category_ids']);
+        return $variation;
+    }
+
     public function toggleActive(Variation $variation)
     {
         $variation->updated_by = auth()->user()->id;
@@ -28,7 +43,7 @@ class VariationRepository extends BaseRepo
     {
         $data = $this->model->find($id);
         if ($data) {
-            $data->load(['created_by', 'updated_by']);
+            $data->load(['created_by', 'updated_by', 'productCategories']);
         }
         return $data;
     }

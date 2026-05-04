@@ -26,7 +26,7 @@ class VariationService
         ?string $status = null
     ) {
         try {
-            $result = $this->variation_repository->getDataWithPagination(page: $page, perPage: $perPage, status: $status, searches: $searches, with: $with, conditions: $conditions);
+            $result = $this->variation_repository->getDataWithPagination(page: $page, perPage: $perPage, status: $status, searches: $searches, with: $with, whereHas: $whereHas, conditions: $conditions);
             return $result;
         } catch (Exception $e) {
             logger()->error('Error : Failed to fetch variation data with pagination: ' . $e->getMessage());

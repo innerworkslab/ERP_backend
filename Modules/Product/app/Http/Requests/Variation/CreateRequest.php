@@ -25,6 +25,9 @@ class CreateRequest extends FormRequest
             'name' => 'required|string|max:255|unique:variations,name',
             'value_data_type' => 'required|string|max:255',
             'status' => 'required|in:active,inactive',
+
+            'product_category_ids' => 'required|array|min:1',
+            'product_category_ids.*' => 'required|exists:categories,id',
         ];
     }
 
