@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('origin_countries', function (Blueprint $table) {
+        Schema::create('product_variations', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('variation_id');
+            $table->string('variation_value', 150);
             $table->timestamps();
         });
     }
@@ -24,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('origin_countries');
+        Schema::dropIfExists('product_variations');
     }
 };

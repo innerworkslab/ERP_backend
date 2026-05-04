@@ -136,4 +136,24 @@ class OriginCountryController extends Controller
             return $this->errorResponse('Something went wrong!', 500);
         }
     }
+
+    public function toggleActive($id)
+    {
+        try {
+            if (!is_numeric($id)) {
+                return $this->errorResponse('ID must be an integer!', 422);
+            }
+
+            $data = $this->origin_country_service->whereFirst('id', $id);
+            if ($data) {
+                $this->origin_country_service->toggleOriginCountryStatus($data);
+                return $this->successResponse([], 200, 'Toggle status successfully');
+            }
+
+            return $this->errorResponse('Origin country not found', 404);
+        } catch (\Exception $e) {
+            logger()->error($e);
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
 }

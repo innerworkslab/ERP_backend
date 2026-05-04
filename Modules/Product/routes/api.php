@@ -46,6 +46,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::prefix('v1/origin-countries')->group(function() {
+        Route::patch('{id}/toggle-status', [OriginCountryController::class, 'toggleActive'])->middleware('permission:update_product');
         Route::get('', [OriginCountryController::class, 'index'])->middleware('permission:view_product'); 
         Route::post('', [OriginCountryController::class, 'create'])->middleware('permission:create_product');
         Route::put('{id}', [OriginCountryController::class, 'update'])->middleware('permission:update_product');

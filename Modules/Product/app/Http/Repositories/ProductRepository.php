@@ -26,6 +26,7 @@ class ProductRepository extends BaseRepo
                 'sale_currency',
                 'sale_tax',
                 'sale_uom',
+                'product_variations.variation',
                 'created_by',
                 'updated_by',
             ]);
