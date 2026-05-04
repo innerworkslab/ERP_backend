@@ -92,4 +92,21 @@ class CustomerController extends Controller
             return $this->errorResponse('Something went wrong!', 500);
         }
     }
+
+    public function toggleStatus(int $id)
+    {
+        try {
+            $result = $this->customerService->toggleStatus($id);
+
+            if (!$result) {
+                return $this->errorResponse('Customer not found.', 404);
+            }
+
+            return $this->successResponse(true, 200, 'Customer status toggled successfully');
+        } catch (\Exception $e) {
+            logger()->error($e);
+
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
 }

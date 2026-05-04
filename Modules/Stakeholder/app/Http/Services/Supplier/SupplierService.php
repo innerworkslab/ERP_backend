@@ -12,7 +12,7 @@ class SupplierService
 {
     private const PREFIX = 'SUP';
     private const RUNNING_NUMBER_LENGTH = 6;
-    private const RELATIONS = ['branch', 'created_by', 'updated_by'];
+    private const RELATIONS = ['supplier_type', 'bank_accounts', 'state', 'city', 'branch', 'created_by', 'updated_by'];
 
     public function __construct(private SupplierRepository $supplierRepository)
     {
@@ -57,17 +57,28 @@ class SupplierService
             $userId = auth()->id();
             $branchId = (int) ($attributes['branch_id'] ?? 0);
             $runningNumber = $this->getNextRunningNumber($branchId);
+            $bankAccounts = $attributes['bank_accounts'] ?? [];
 
             unset($attributes['created_by'], $attributes['updated_by']);
+            unset($attributes['bank_accounts']);
 
             $attributes['code'] = 'TMP-SUP-' . uniqid();
             $attributes['created_by'] = $userId;
+            $attributes['bank_account_id'] = $attributes['bank_account_id'] ?? 0;
 
             $supplier = $this->supplierRepository->create($attributes);
 
             $supplier->update([
                 'code' => $this->generateCode($supplier->id, $branchId, $runningNumber),
             ]);
+
+            if (count($bankAccounts) > 0) {
+                $supplier->bank_accounts()->createMany($bankAccounts);
+                $firstBankAccountId = $supplier->bank_accounts()->value('id');
+                if ($firstBankAccountId) {
+                    $supplier->update(['bank_account_id' => $firstBankAccountId]);
+                }
+            }
 
             return $supplier->fresh()->loadMissing(self::RELATIONS);
         });
@@ -86,15 +97,26 @@ class SupplierService
 
     public function update(int $id, array $attributes): ?Supplier
     {
-        if (!$this->supplierRepository->find($id)) {
+        $supplierModel = $this->supplierRepository->find($id);
+        if (!$supplierModel) {
             return null;
         }
 
         unset($attributes['code'], $attributes['created_by'], $attributes['updated_by']);
+        $bankAccounts = $attributes['bank_accounts'] ?? null;
+        unset($attributes['bank_accounts']);
 
         $attributes['updated_by'] = auth()->id();
 
         $supplier = $this->supplierRepository->update($id, $attributes);
+        if (is_array($bankAccounts) && count($bankAccounts) > 0) {
+            $supplierModel->bank_accounts()->delete();
+            $supplierModel->bank_accounts()->createMany($bankAccounts);
+            $firstBankAccountId = $supplierModel->bank_accounts()->value('id');
+            if ($firstBankAccountId) {
+                $supplier?->update(['bank_account_id' => $firstBankAccountId]);
+            }
+        }
 
         return $supplier?->loadMissing(self::RELATIONS);
     }
@@ -102,6 +124,23 @@ class SupplierService
     public function delete(int $id): bool
     {
         return $this->supplierRepository->delete($id);
+    }
+
+    public function toggleStatus(int $id): ?Supplier
+    {
+        $supplier = $this->supplierRepository->find($id);
+        if (!$supplier) {
+            return null;
+        }
+
+        $nextStatus = $supplier->status === 'Active' ? 'Inactive' : 'Active';
+
+        $supplier = $this->supplierRepository->update($id, [
+            'status' => $nextStatus,
+            'updated_by' => auth()->id(),
+        ]);
+
+        return $supplier?->loadMissing(self::RELATIONS);
     }
 
     private function generateCode(int $id, int $branchId, int $runningNumber): string
@@ -115,6 +154,7 @@ class SupplierService
         return $id . '-' . $branchId . '-' . self::PREFIX . '-' . str_pad((string) $runningNumber, self::RUNNING_NUMBER_LENGTH, '0', STR_PAD_LEFT);
     }
 
+    //code format: {id}-{branch_id}-SUP-{running_number}
     private function getNextRunningNumber(int $branchId): int
     {
         if ($branchId <= 0) {

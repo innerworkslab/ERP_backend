@@ -4,7 +4,11 @@ namespace Modules\Stakeholder\app\Models;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Location\app\Models\City;
+use Modules\Location\app\Models\State;
 use Modules\Organization\app\Models\Branch;
+use Modules\Stakeholder\app\Models\SupplierBankAccount;
+use Modules\Stakeholder\app\Models\SupplierType;
 
 class Supplier extends Model
 {
@@ -15,18 +19,15 @@ class Supplier extends Model
         'name',
         'company_name',
         'phone_number',
-        'country',
-        'town',
-        'township',
+        'state_id',
+        'city_id',
         'address',
-        'bank_acc',
+        'bank_account_id',
         'branch_id',
         'credit_limit',
         'opening',
-        'type',
+        'supplier_type_id',
         'birthday',
-        'payment_terms',
-        'payment_due',
         'status',
         'created_by',
         'updated_by',
@@ -38,9 +39,33 @@ class Supplier extends Model
         'birthday' => 'date',
     ];
 
+    public function supplier_type()
+    {
+        return $this->belongsTo(SupplierType::class);
+    }
+
+    public function bank_account()
+    {
+        return $this->belongsTo(SupplierBankAccount::class, 'bank_account_id');
+    }
+    public function bank_accounts()
+    {
+        return $this->hasMany(SupplierBankAccount::class, 'supplier_id');
+    }
+
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function state()
+    {
+        return $this->belongsTo(State::class, 'state_id');
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city_id');
     }
 
     public function created_by()
