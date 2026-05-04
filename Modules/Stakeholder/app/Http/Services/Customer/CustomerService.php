@@ -12,7 +12,7 @@ class CustomerService
 {
     private const PREFIX = 'CUS';
     private const RUNNING_NUMBER_LENGTH = 6;
-    private const RELATIONS = ['customer_type', 'branch', 'created_by', 'updated_by'];
+    private const RELATIONS = ['customer_type', 'bank_accounts', 'state', 'city', 'branch', 'created_by', 'updated_by'];
 
     public function __construct(private CustomerRepository $customerRepository)
     {
@@ -57,8 +57,10 @@ class CustomerService
             $userId = auth()->id();
             $branchId = (int) ($attributes['branch_id'] ?? 0);
             $runningNumber = $this->getNextRunningNumber($branchId);
+            $bankAccounts = $attributes['bank_accounts'] ?? null;
 
             unset($attributes['created_by'], $attributes['updated_by']);
+            unset($attributes['bank_accounts']);
 
             $attributes['code'] = 'TMP-CUS-' . uniqid();
             $attributes['created_by'] = $userId;
@@ -68,6 +70,14 @@ class CustomerService
             $customer->update([
                 'code' => $this->generateCode($customer->id, $branchId, $runningNumber),
             ]);
+
+            if (is_array($bankAccounts) && count($bankAccounts) > 0) {
+                $customer->bank_accounts()->createMany($bankAccounts);
+                $firstBankAccountId = $customer->bank_accounts()->value('id');
+                if ($firstBankAccountId) {
+                    $customer->update(['bank_account_id' => $firstBankAccountId]);
+                }
+            }
 
             return $customer->fresh()->loadMissing(self::RELATIONS);
         });
@@ -86,15 +96,28 @@ class CustomerService
 
     public function update(int $id, array $attributes): ?Customer
     {
-        if (!$this->customerRepository->find($id)) {
+        $customerModel = $this->customerRepository->find($id);
+        if (!$customerModel) {
             return null;
         }
 
         unset($attributes['code'], $attributes['created_by'], $attributes['updated_by']);
+        $bankAccounts = $attributes['bank_accounts'] ?? null;
+        unset($attributes['bank_accounts']);
 
         $attributes['updated_by'] = auth()->id();
 
         $customer = $this->customerRepository->update($id, $attributes);
+        if (is_array($bankAccounts)) {
+            $customerModel->bank_accounts()->delete();
+            if (count($bankAccounts) > 0) {
+                $customerModel->bank_accounts()->createMany($bankAccounts);
+                $firstBankAccountId = $customerModel->bank_accounts()->value('id');
+                $customer?->update(['bank_account_id' => $firstBankAccountId]);
+            } else {
+                $customer?->update(['bank_account_id' => null]);
+            }
+        }
 
         return $customer?->loadMissing(self::RELATIONS);
     }
@@ -102,6 +125,23 @@ class CustomerService
     public function delete(int $id): bool
     {
         return $this->customerRepository->delete($id);
+    }
+
+    public function toggleStatus(int $id): ?Customer
+    {
+        $customer = $this->customerRepository->find($id);
+        if (!$customer) {
+            return null;
+        }
+
+        $nextStatus = $customer->status === 'Active' ? 'Inactive' : 'Active';
+
+        $customer = $this->customerRepository->update($id, [
+            'status' => $nextStatus,
+            'updated_by' => auth()->id(),
+        ]);
+
+        return $customer?->loadMissing(self::RELATIONS);
     }
 
     private function generateCode(int $id, int $branchId, int $runningNumber): string

@@ -4,7 +4,10 @@ namespace Modules\Stakeholder\app\Models;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Location\app\Models\City;
+use Modules\Location\app\Models\State;
 use Modules\Organization\app\Models\Branch;
+use Modules\Stakeholder\app\Models\CustomerBankAccount;
 use Modules\Stakeholder\app\Models\CustomerType;
 
 class Customer extends Model
@@ -16,18 +19,15 @@ class Customer extends Model
         'name',
         'company_name',
         'phone_number',
-        'country',
-        'town',
-        'township',
+        'state_id',
+        'city_id',
         'address',
-        'bank_acc',
+        'bank_account_id',
         'branch_id',
         'credit_limit',
         'opening',
         'customer_type_id',
         'birthday',
-        'payment_terms',
-        'payment_due',
         'status',
         'created_by',
         'updated_by',
@@ -44,9 +44,29 @@ class Customer extends Model
         return $this->belongsTo(CustomerType::class);
     }
 
+    public function bank_account()
+    {
+        return $this->belongsTo(CustomerBankAccount::class, 'bank_account_id');
+    }
+
+    public function bank_accounts()
+    {
+        return $this->hasMany(CustomerBankAccount::class, 'customer_id');
+    }
+
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function state()
+    {
+        return $this->belongsTo(State::class, 'state_id');
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city_id');
     }
 
     public function created_by()

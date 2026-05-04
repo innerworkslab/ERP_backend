@@ -13,6 +13,7 @@ class StakeholderDatabaseSeeder extends Seeder
     {
         $this->call([
             CustomerTypeSeeder::class,
+            SupplierTypeSeeder::class,
         ]);
     }
 }

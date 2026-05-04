@@ -92,4 +92,21 @@ class SupplierController extends Controller
             return $this->errorResponse('Something went wrong!', 500);
         }
     }
+
+    public function toggleStatus(int $id)
+    {
+        try {
+            $result = $this->supplierService->toggleStatus($id);
+
+            if (!$result) {
+                return $this->errorResponse('Supplier not found.', 404);
+            }
+
+            return $this->successResponse(true, 200, 'Supplier status toggled successfully');
+        } catch (\Exception $e) {
+            logger()->error($e);
+
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
 }
