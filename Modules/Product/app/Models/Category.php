@@ -33,6 +33,15 @@ class Category extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    public function variations()
+    {
+        return $this->belongsToMany(
+            Variation::class,
+            'category_variation',
+            'category_id',
+            'variation_id'
+        )->withTimestamps();
+    }
     // protected static function newFactory(): CategoryFactory
     // {
     //     // return CategoryFactory::new();

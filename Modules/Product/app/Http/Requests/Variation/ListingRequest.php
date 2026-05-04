@@ -25,7 +25,8 @@ class ListingRequest extends FormRequest
             'page' => 'integer',
             'per_page' => 'integer',
             'search'=> 'string',
-            'status' => 'string|in:active,inactive'
+            'status' => 'string|in:active,inactive',
+            'product_category_id' => 'integer|exists:categories,id'
         ];
     }
 

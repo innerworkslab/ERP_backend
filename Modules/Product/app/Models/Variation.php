@@ -42,4 +42,14 @@ class Variation extends Model
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
+
+    public function productCategories()
+    {
+        return $this->belongsToMany(
+            Category::class,
+            'category_variation',
+            'variation_id',
+            'category_id'
+        )->withTimestamps();
+    }
 }

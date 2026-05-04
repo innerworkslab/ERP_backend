@@ -52,8 +52,19 @@ class VariationController extends Controller
             if (!empty($validated['status'])) {
                 $conditions['status'] = $validated['status'];
             }
-            $with = ['created_by', 'updated_by'];
-            $res_data = $this->variation_service->getDataWithPagination($per_page, $page, status: $status, searches: $searches, with: $with, conditions: $conditions);
+
+            $whereHas = null;
+
+            if (!empty($validated['product_category_id'])) {
+                $categoryId = $validated['product_category_id'];
+
+                $whereHas['productCategories'] = function ($query) use ($categoryId) {
+                    $query->where('categories.id', $categoryId);
+                };
+            }
+
+            $with = ['created_by', 'updated_by', 'productCategories'];
+            $res_data = $this->variation_service->getDataWithPagination($per_page, $page, status: $status, searches: $searches, with: $with, whereHas: $whereHas, conditions: $conditions);
             return $this->paginatedSuccessResponse($res_data, 200, 'Variation Lists');
         } catch (\Exception $e) {
             logger()->error($e);
