@@ -10,4 +10,15 @@ class OriginCountryRepository extends BaseRepo
     {
         parent::__construct($model);
     }
+
+    public function toggleActive(OriginCountry $originCountry): void
+    {
+        try {
+            $originCountry->status = $originCountry->status === 'active' ? 'inactive' : 'active';
+            $originCountry->save();
+        } catch (\Exception $e) {
+            // Handle exception, e.g., log the error or rethrow
+            throw $e;
+        }
+    }
 }

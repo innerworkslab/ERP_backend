@@ -10,7 +10,7 @@ class CreateProduct extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'sku' => 'required|string|max:255|unique:products,sku',
+            'sku' => 'nullable|string|max:255|unique:products,sku',
             'image' => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:5120',
             'category_id' => 'required|integer|exists:categories,id',
             'brand_id' => 'required|integer|exists:brands,id',
@@ -25,6 +25,9 @@ class CreateProduct extends FormRequest
             'sale_tax_id' => 'nullable|integer|exists:taxs,id',
             'sale_uom_id' => 'nullable|integer|exists:unit_of_measurements,id',
             'origin_country_id' => 'nullable|integer|exists:origin_countries,id',
+            'variations' => 'nullable|array',
+            'variations.*.variation_id' => 'required|integer|exists:variations,id',
+            'variations.*.variation_value' => 'required|string|max:150',
             'status' => 'required|in:active,inactive',
         ];
     }

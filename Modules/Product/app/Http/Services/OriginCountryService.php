@@ -102,4 +102,9 @@ class OriginCountryService
             throw $e;
         }
     }
+
+    public function toggleOriginCountryStatus($data): void
+    {
+        $this->origin_country_repository->toggleActive($data);
+    }
 }

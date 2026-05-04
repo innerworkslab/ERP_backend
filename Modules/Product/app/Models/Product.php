@@ -13,6 +13,7 @@ use Modules\Inventory\app\Models\UnitOfMeasurement;
 use Modules\Organization\app\Models\Currency;
 use Modules\Product\app\Models\Collection;
 use Modules\Product\app\Models\CollectionItem;
+use Modules\Product\app\Models\ProductVariation;
 // use Modules\Product\Database\Factories\ProductFactory;
 
 class Product extends Model
@@ -117,6 +118,11 @@ class Product extends Model
     public function product_lots(): HasMany
     {
         return $this->hasMany(ProductLots::class, 'product_id');
+    }
+
+    public function product_variations(): HasMany
+    {
+        return $this->hasMany(ProductVariation::class, 'product_id');
     }
 
     // protected static function newFactory(): ProductFactory
