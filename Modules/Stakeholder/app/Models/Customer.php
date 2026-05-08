@@ -23,7 +23,6 @@ class Customer extends Model
         'city_id',
         'address',
         'bank_account_id',
-        'branch_id',
         'credit_limit',
         'opening',
         'customer_type_id',
@@ -57,6 +56,11 @@ class Customer extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class, 'customer_branches', 'customer_id', 'branch_id')->withTimestamps();
     }
 
     public function state()

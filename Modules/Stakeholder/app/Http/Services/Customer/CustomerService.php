@@ -12,7 +12,7 @@ class CustomerService
 {
     private const PREFIX = 'CUS';
     private const RUNNING_NUMBER_LENGTH = 6;
-    private const RELATIONS = ['customer_type', 'bank_accounts', 'state', 'city', 'branch', 'created_by', 'updated_by'];
+    private const RELATIONS = ['customer_type', 'bank_accounts', 'state', 'city', 'branches', 'created_by', 'updated_by'];
 
     public function __construct(private CustomerRepository $customerRepository)
     {
@@ -20,7 +20,7 @@ class CustomerService
 
     public function list(array $filters): array
     {
-        $query = Customer::query()->with(self::RELATIONS)->latest();
+        $query = $this->customerRepository->queryWithRelations()->latest();
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -55,17 +55,19 @@ class CustomerService
     {
         return DB::transaction(function () use ($attributes) {
             $userId = auth()->id();
-            $branchId = (int) ($attributes['branch_id'] ?? 0);
+            $branchIds = $this->resolveBranchIds($attributes);
+            $branchId = $branchIds[0] ?? 0;
             $runningNumber = $this->getNextRunningNumber($branchId);
             $bankAccounts = $attributes['bank_accounts'] ?? null;
 
             unset($attributes['created_by'], $attributes['updated_by']);
-            unset($attributes['bank_accounts']);
+            unset($attributes['bank_accounts'], $attributes['branch_id'], $attributes['branch_ids']);
 
             $attributes['code'] = 'TMP-CUS-' . uniqid();
             $attributes['created_by'] = $userId;
 
             $customer = $this->customerRepository->create($attributes);
+            $this->customerRepository->syncBranches($customer, $branchIds);
 
             $customer->update([
                 'code' => $this->generateCode($customer->id, $branchId, $runningNumber),
@@ -103,11 +105,17 @@ class CustomerService
 
         unset($attributes['code'], $attributes['created_by'], $attributes['updated_by']);
         $bankAccounts = $attributes['bank_accounts'] ?? null;
-        unset($attributes['bank_accounts']);
+        $hasBranchPayload = array_key_exists('branch_ids', $attributes) || array_key_exists('branch_id', $attributes);
+        $branchIds = $hasBranchPayload ? $this->resolveBranchIds($attributes, true) : [];
+        unset($attributes['bank_accounts'], $attributes['branch_id'], $attributes['branch_ids']);
 
         $attributes['updated_by'] = auth()->id();
 
         $customer = $this->customerRepository->update($id, $attributes);
+        if ($hasBranchPayload) {
+            $this->customerRepository->syncBranches($customerModel, $branchIds);
+        }
+
         if (is_array($bankAccounts)) {
             $customerModel->bank_accounts()->delete();
             if (count($bankAccounts) > 0) {
@@ -163,17 +171,27 @@ class CustomerService
             ]);
         }
 
-        $baseCodePattern = '/^\d+-' . preg_quote((string) $branchId, '/') . '-' . self::PREFIX . '-(\d+)$/';
-        $latestCode = (string) Customer::query()
-            ->where('branch_id', $branchId)
-            ->latest('id')
-            ->lockForUpdate()
-            ->value('code');
+        return $this->customerRepository->getNextRunningNumberByBranch($branchId, self::PREFIX);
+    }
 
-        if ($latestCode !== '' && preg_match($baseCodePattern, $latestCode, $matches)) {
-            return ((int) $matches[1]) + 1;
+    private function resolveBranchIds(array $attributes, bool $allowEmpty = false): array
+    {
+        $branchIds = $attributes['branch_ids'] ?? null;
+
+        if (is_array($branchIds)) {
+            return array_values(array_unique(array_map('intval', $branchIds)));
         }
 
-        return 1;
+        if (!empty($attributes['branch_id'])) {
+            return [(int) $attributes['branch_id']];
+        }
+
+        if ($allowEmpty) {
+            return [];
+        }
+
+        throw ValidationException::withMessages([
+            'branch_ids' => ['At least one branch is required for customer.'],
+        ]);
     }
 }
