@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Location\app\Models\City;
 use Modules\Location\app\Models\State;
-use Modules\Organization\app\Models\Branch;
 use Modules\Stakeholder\app\Models\SupplierBankAccount;
 use Modules\Stakeholder\app\Models\SupplierType;
 
@@ -23,7 +22,6 @@ class Supplier extends Model
         'city_id',
         'address',
         'bank_account_id',
-        'branch_id',
         'credit_limit',
         'opening',
         'supplier_type_id',
@@ -51,11 +49,6 @@ class Supplier extends Model
     public function bank_accounts()
     {
         return $this->hasMany(SupplierBankAccount::class, 'supplier_id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class);
     }
 
     public function state()

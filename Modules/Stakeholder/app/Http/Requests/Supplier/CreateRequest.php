@@ -26,7 +26,6 @@ class CreateRequest extends FormRequest
             'bank_accounts.*.account_number' => ['required_with:bank_accounts', 'string', 'max:100'],
             'bank_accounts.*.holder_name' => ['required_with:bank_accounts', 'string', 'max:150'],
 
-            'branch_id' => ['nullable', 'integer'],
             'credit_limit' => ['nullable', 'numeric', 'min:0'],
             'opening' => ['nullable', 'numeric'],
             'supplier_type_id' => ['required', 'integer', 'exists:supplier_types,id'],

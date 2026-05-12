@@ -4,15 +4,14 @@ namespace Modules\Stakeholder\app\Http\Services\Supplier;
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Modules\Stakeholder\app\Models\Supplier;
 use Modules\Stakeholder\app\Http\Repositories\Supplier\SupplierRepository;
 
 class SupplierService
 {
-    private const PREFIX = 'SUP';
-    private const RUNNING_NUMBER_LENGTH = 6;
-    private const RELATIONS = ['supplier_type', 'bank_accounts', 'state', 'city', 'branch', 'created_by', 'updated_by'];
+    private const CODE_PREFIX = 'SUP-';
+    private const CODE_NUMBER_LENGTH = 4;
+    private const RELATIONS = ['supplier_type', 'bank_accounts', 'state', 'city', 'created_by', 'updated_by'];
 
     public function __construct(private SupplierRepository $supplierRepository)
     {
@@ -55,22 +54,16 @@ class SupplierService
     {
         return DB::transaction(function () use ($attributes) {
             $userId = auth()->id();
-            $branchId = (int) ($attributes['branch_id'] ?? 0);
-            $runningNumber = $this->getNextRunningNumber($branchId);
             $bankAccounts = $attributes['bank_accounts'] ?? [];
 
             unset($attributes['created_by'], $attributes['updated_by']);
             unset($attributes['bank_accounts']);
 
-            $attributes['code'] = 'TMP-SUP-' . uniqid();
+            $attributes['code'] = $this->generateNextSupplierCode();
             $attributes['created_by'] = $userId;
             $attributes['bank_account_id'] = $attributes['bank_account_id'] ?? 0;
 
             $supplier = $this->supplierRepository->create($attributes);
-
-            $supplier->update([
-                'code' => $this->generateCode($supplier->id, $branchId, $runningNumber),
-            ]);
 
             if (count($bankAccounts) > 0) {
                 $supplier->bank_accounts()->createMany($bankAccounts);
@@ -143,37 +136,19 @@ class SupplierService
         return $supplier?->loadMissing(self::RELATIONS);
     }
 
-    private function generateCode(int $id, int $branchId, int $runningNumber): string
+    private function generateNextSupplierCode(): string
     {
-        if ($branchId <= 0) {
-            throw ValidationException::withMessages([
-                'branch_id' => ['Branch ID is required for supplier code generation.'],
-            ]);
-        }
-
-        return $id . '-' . $branchId . '-' . self::PREFIX . '-' . str_pad((string) $runningNumber, self::RUNNING_NUMBER_LENGTH, '0', STR_PAD_LEFT);
-    }
-
-    //code format: {id}-{branch_id}-SUP-{running_number}
-    private function getNextRunningNumber(int $branchId): int
-    {
-        if ($branchId <= 0) {
-            throw ValidationException::withMessages([
-                'branch_id' => ['Branch ID is required for supplier code generation.'],
-            ]);
-        }
-
-        $baseCodePattern = '/^\d+-' . preg_quote((string) $branchId, '/') . '-' . self::PREFIX . '-(\d+)$/';
         $latestCode = (string) Supplier::query()
-            ->where('branch_id', $branchId)
+            ->where('code', 'like', self::CODE_PREFIX . '%')
             ->latest('id')
             ->lockForUpdate()
             ->value('code');
 
-        if ($latestCode !== '' && preg_match($baseCodePattern, $latestCode, $matches)) {
-            return ((int) $matches[1]) + 1;
+        $nextNumber = 1;
+        if ($latestCode !== '' && preg_match('/^SUP-(\d+)$/', $latestCode, $matches)) {
+            $nextNumber = ((int) $matches[1]) + 1;
         }
 
-        return 1;
+        return self::CODE_PREFIX . str_pad((string) $nextNumber, self::CODE_NUMBER_LENGTH, '0', STR_PAD_LEFT);
     }
 }
