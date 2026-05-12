@@ -21,7 +21,6 @@ return new class extends Migration
             $table->unsignedBigInteger('city_id')->nullable();
             $table->text('address')->nullable();
             $table->unsignedBigInteger('bank_account_id');
-            $table->unsignedBigInteger('branch_id')->nullable();
             $table->decimal('credit_limit', 18, 2)->default(0);
             $table->decimal('opening', 18, 2)->default(0);
             $table->unsignedBigInteger('supplier_type_id');

@@ -25,7 +25,6 @@ class UpdateRequest extends FormRequest
             'bank_accounts.*.bank_name' => ['required_with:bank_accounts', 'string', 'max:150'],
             'bank_accounts.*.account_number' => ['required_with:bank_accounts', 'string', 'max:100'],
             'bank_accounts.*.holder_name' => ['required_with:bank_accounts', 'string', 'max:150'],
-            'branch_id' => ['sometimes', 'nullable', 'integer'],
             'credit_limit' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'opening' => ['sometimes', 'nullable', 'numeric'],
             'supplier_type_id' => ['sometimes', 'required', 'integer', 'exists:supplier_types,id'],
