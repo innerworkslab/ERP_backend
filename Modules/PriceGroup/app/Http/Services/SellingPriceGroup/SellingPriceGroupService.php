@@ -18,8 +18,9 @@ class SellingPriceGroupService
         $perPage = (int) ($filters['per_page'] ?? 10);
         $page = (int) ($filters['page'] ?? 1);
 
-        $searches = !empty($filters['keyword'])
-            ? ['name' => $filters['keyword']]
+        $searchKeyword = $filters['keyword'] ?? $filters['search'] ?? null;
+        $searches = !empty($searchKeyword)
+            ? ['name' => $searchKeyword]
             : null;
 
         $conditions = [];
@@ -39,7 +40,9 @@ class SellingPriceGroupService
         }
 
         if (array_key_exists('is_active', $filters)) {
-            $conditions['is_active'] = (bool) $filters['is_active'];
+            $conditions['status'] = (bool) $filters['is_active'] ? 'active' : 'inactive';
+        } elseif (!empty($filters['status']) && in_array($filters['status'], ['active', 'inactive'], true)) {
+            $conditions['status'] = $filters['status'];
         }
 
         return $this->sellingPriceGroupRepository->getDataWithPagination(

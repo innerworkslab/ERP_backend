@@ -33,7 +33,7 @@ class SellingPriceGroupRepository extends BaseRepo
 
     public function toggleActive(SellingPriceGroup $sellingPriceGroup): void
     {
-        $sellingPriceGroup->is_active = !$sellingPriceGroup->is_active;
+        $sellingPriceGroup->status = $sellingPriceGroup->status === 'active' ? 'inactive' : 'active';
         $sellingPriceGroup->save();
     }
 }
