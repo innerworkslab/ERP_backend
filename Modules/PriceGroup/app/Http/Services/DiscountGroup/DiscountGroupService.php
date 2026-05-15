@@ -17,8 +17,9 @@ class DiscountGroupService
         $perPage = (int) ($filters['per_page'] ?? 10);
         $page = (int) ($filters['page'] ?? 1);
 
-        $searches = !empty($filters['keyword'])
-            ? ['name' => $filters['keyword']]
+        $searchKeyword = $filters['keyword'] ?? $filters['search'] ?? null;
+        $searches = !empty($searchKeyword)
+            ? ['name' => $searchKeyword]
             : null;
 
         $conditions = [];
@@ -33,6 +34,8 @@ class DiscountGroupService
 
         if (array_key_exists('is_active', $filters)) {
             $conditions['is_active'] = (bool) $filters['is_active'];
+        } elseif (!empty($filters['status']) && in_array($filters['status'], ['active', 'inactive'], true)) {
+            $conditions['is_active'] = $filters['status'] === 'active';
         }
 
         return $this->discountGroupRepository->getDataWithPagination(

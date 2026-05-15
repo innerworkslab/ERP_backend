@@ -17,9 +17,11 @@ class ListingRequest extends FormRequest
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'keyword' => ['nullable', 'string', 'max:255'],
+            'search' => ['nullable', 'string', 'max:255'],
             'customer_type_id' => ['nullable', 'integer'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'is_active' => ['nullable', 'boolean'],
+            'status' => ['nullable', 'in:active,inactive'],
         ];
     }
 }
