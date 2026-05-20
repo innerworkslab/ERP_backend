@@ -196,6 +196,14 @@ class PermissionSeeder extends Seeder
             'stock_balance_feature' => [
                 ['name' => 'View Stock Balance', 'key' => 'view_stock_balance'],
             ],
+
+            //Purchase Order
+            'purchase_order_feature' => [
+                ['name' => 'View Purchase Order', 'key' => 'view_purchase_order'],
+                ['name' => 'Create Purchase Order', 'key' => 'create_purchase_order'],
+                ['name' => 'Update Purchase Order', 'key' => 'update_purchase_order'],
+                ['name' => 'Delete Purchase Order', 'key' => 'delete_purchase_order'],
+            ],
             
             // Location
             'location_feature' => [

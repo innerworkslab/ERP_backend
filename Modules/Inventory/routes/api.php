@@ -3,11 +3,12 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Inventory\app\Http\Controllers\InventoryController;
 use Modules\Inventory\app\Http\Controllers\OpeningStockController;
+use Modules\Inventory\app\Http\Controllers\PurchaseOrderController;
+use Modules\Inventory\app\Http\Controllers\StockBalanceController;
+use Modules\Inventory\app\Http\Controllers\StockMovementController;
 use Modules\Inventory\app\Http\Controllers\StockTransferController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementController;
 use Modules\Inventory\app\Http\Controllers\UnitOfMeasurementConversionController;
-use Modules\Inventory\app\Http\Controllers\StockMovementController;
-use Modules\Inventory\app\Http\Controllers\StockBalanceController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/unit-of-measurements')->group(function () {
@@ -61,6 +62,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/stock-balances')->group(function(){
         Route::get('', [StockBalanceController::class, 'index'])->middleware('permission:view_stock_balance');
         Route::get('product/{productId}/lots', [StockBalanceController::class, 'lotTotals'])->middleware('permission:view_stock_balance');
+    });
+
+    Route::prefix('v1/purchase-orders')->group(function(){
+        Route::post('calculate-line-total', [PurchaseOrderController::class, 'calculateLineTotal'])->middleware('permission:create_purchase_order');
+        Route::post('calculate-total-amount', [PurchaseOrderController::class, 'calculateTotalAmount'])->middleware('permission:create_purchase_order');
+        Route::get('', [PurchaseOrderController::class, 'index'])->middleware('permission:view_purchase_order');
+        Route::post('', [PurchaseOrderController::class, 'store'])->middleware('permission:create_purchase_order');
+        Route::get('{id}', [PurchaseOrderController::class, 'show'])->middleware('permission:view_purchase_order');
+        Route::put('{id}', [PurchaseOrderController::class, 'update'])->middleware('permission:update_purchase_order');
+        Route::delete('{id}', [PurchaseOrderController::class, 'destroy'])->middleware('permission:delete_purchase_order');
+        Route::put('{id}/status', [PurchaseOrderController::class, 'updateStatus'])->middleware('permission:update_purchase_order');
+        Route::put('{id}/payment-status', [PurchaseOrderController::class, 'updatePaymentStatus'])->middleware('permission:update_purchase_order');
+        Route::put('{id}/delivery-status', [PurchaseOrderController::class, 'updateDeliveryStatus'])->middleware('permission:update_purchase_order');
     });
 
         
