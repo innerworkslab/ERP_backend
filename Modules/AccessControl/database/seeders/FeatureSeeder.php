@@ -206,6 +206,14 @@ class FeatureSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'Purchase Order',
+                'key' => 'purchase_order_feature',
+                'module' => 'Inventory',
+                'description' => 'This is a feature of purchase order',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
         ];
 
         foreach ($features as $feature) {
