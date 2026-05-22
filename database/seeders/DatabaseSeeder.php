@@ -6,6 +6,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Modules\AccessControl\database\seeders\FeatureSeeder;
 use Modules\AccessControl\database\seeders\PermissionSeeder;
+use Modules\Accounting\database\seeders\AccountSeeder;
 use Modules\Location\database\seeders\CitySeeder;
 use Modules\Location\database\seeders\StateSeeder;
 use Modules\Organization\database\seeders\OrganizationDatabaseSeeder;
@@ -36,7 +37,8 @@ class DatabaseSeeder extends Seeder
             PriceGroupDatabaseSeeder::class,
             StaffDatabaseSeeder::class,
             StateSeeder::class,
-            CitySeeder::class
+            CitySeeder::class,
+            AccountSeeder::class,
         ]);
     }
 }
