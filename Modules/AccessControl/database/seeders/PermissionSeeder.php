@@ -209,6 +209,27 @@ class PermissionSeeder extends Seeder
             'location_feature' => [
                 ['name' => 'View Location Record', 'key' => 'view_location_record'],
             ],
+
+            // Account
+            'account_feature' => [
+                ['name' => 'View Accounts', 'key' => 'view_account'],
+            ],
+
+            // Cashbook
+            'cashbook_feature' => [
+                ['name' => 'View Cashbook', 'key' => 'view_cashbook'],
+                ['name' => 'Create Cashbook', 'key' => 'create_cashbook'],
+                ['name' => 'Update Cashbook', 'key' => 'update_cashbook'],
+                ['name' => 'Delete Cashbook', 'key' => 'delete_cashbook'],
+            ],
+
+            // Cashbook Transaction
+            'cashbook_transaction_feature' => [
+                ['name' => 'View Cashbook Transaction', 'key' => 'view_cashbook_transaction'],
+                ['name' => 'Create Cashbook Transaction', 'key' => 'create_cashbook_transaction'],
+                ['name' => 'Update Cashbook Transaction', 'key' => 'update_cashbook_transaction'],
+                ['name' => 'Confirm Cashbook Transaction', 'key' => 'confirm_cashbook_transaction'],
+            ],
         ];
 
         foreach ($permissions as $key => $perms) {

@@ -7,5 +7,6 @@
     "PriceGroup": true,
     "Product": true,
     "Inventory": true,
-    "Location": true
+    "Location": true,
+    "Accounting": true
 }
