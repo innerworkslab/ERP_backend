@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Modules\Inventory\app\Http\Requests\PurchaseOrder\CreateRequest;
 use Modules\Inventory\app\Http\Requests\PurchaseOrder\ListingRequest;
+use Modules\Inventory\app\Http\Requests\PurchaseOrder\PaymentRequest;
 use Modules\Inventory\app\Http\Requests\PurchaseOrder\UpdateRequest;
 use Modules\Inventory\app\Http\Services\PurchaseOrderService;
 
@@ -128,19 +129,15 @@ class PurchaseOrderController extends Controller
                 return $this->validationErrorResponse($validator);
             }
 
-            $data = $this->purchase_order_service->whereFirst('id', (int) $id);
-            if (!$data) {
+            $result = $this->purchase_order_service->update((int) $id, $request->validated());
+            if ($result['status'] == 'item_not_found') {
                 return $this->errorResponse('Purchase order not found', 404);
             }
-
-            if (!in_array($data->status, ['pending', 'draft'], true)) {
-                return $this->errorResponse('Only pending or draft purchase order can be updated', 422);
+            if ($result['status'] == 'invalid_status') {
+                return $this->errorResponse('Only pending or draft purchase order can be processed', 422);
             }
 
-            $result = $this->purchase_order_service->update((int) $id, $request->validated());
-            return $this->successResponse($result, 200, 'Purchase order is updated successfully');
-        } catch (\RuntimeException $e) {
-            return $this->errorResponse($e->getMessage(), 422);
+            return $this->successResponse($result['data'] ?? [], 200, 'Purchase order is updated successfully');
         } catch (\Exception $e) {
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
@@ -154,19 +151,15 @@ class PurchaseOrderController extends Controller
                 return $this->errorResponse('ID must be an integer!', 422);
             }
 
-            $data = $this->purchase_order_service->whereFirst('id', (int) $id);
-            if (!$data) {
+            $result = $this->purchase_order_service->delete((int) $id);
+            if ($result['status'] == 'item_not_found') {
                 return $this->errorResponse('Purchase order not found', 404);
             }
-
-            if (!in_array($data->status, ['pending', 'draft'], true)) {
-                return $this->errorResponse('Only pending or draft purchase order can be deleted', 422);
+            if ($result['status'] == 'invalid_status') {
+                return $this->errorResponse('Only pending or draft purchase order can be processed', 422);
             }
 
-            $this->purchase_order_service->delete((int) $id);
             return $this->successResponse([], 200, 'Purchase order deleted successfully!');
-        } catch (\RuntimeException $e) {
-            return $this->errorResponse($e->getMessage(), 422);
         } catch (\Exception $e) {
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
@@ -189,38 +182,63 @@ class PurchaseOrderController extends Controller
             }
 
             $result = $this->purchase_order_service->updateStatus((int) $id, $request->input('status'));
-            if (!$result) {
+            if ($result['status'] == 'item_not_found') {
                 return $this->errorResponse('Purchase order not found', 404);
             }
 
-            return $this->successResponse($result, 200, 'Purchase order status updated successfully');
+            return $this->successResponse($result['data'] ?? [], 200, 'Purchase order status updated successfully');
         } catch (\Exception $e) {
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
         }
     }
 
-    public function updatePaymentStatus(Request $request, $id)
+    public function updatePaymentStatus(PaymentRequest $request, $id)
     {
         try {
             if (!is_numeric($id)) {
                 return $this->errorResponse('ID must be an integer!', 422);
             }
 
-            $validator = Validator::make($request->all(), [
-                'payment_status' => ['required', 'in:unpaid,partially_paid,paid'],
-            ]);
+            $validated = $request->validated();
 
-            if ($validator->fails()) {
-                return $this->validationErrorResponse($validator);
-            }
-
-            $result = $this->purchase_order_service->updatePaymentStatus((int) $id, $request->input('payment_status'));
-            if (!$result) {
+            $result = $this->purchase_order_service->updatePaymentStatus(
+                (int) $id,
+                $validated
+            );
+            
+            if ($result['status'] == 'item_not_found') {
                 return $this->errorResponse('Purchase order not found', 404);
             }
+            if ($result['status'] == 'already_paid') {
+                return $this->errorResponse('Purchase order is already fully paid. Additional payment is not allowed.', 422);
+            }
+            if ($result['status'] == 'paid_amount_exceeded') {
+                return $this->errorResponse('Paid amount cannot be greater than total amount.', 422);
+            }
+            if ($result['status'] == 'cashbook_required') {
+                return $this->errorResponse('Cashbook is required when paid amount is greater than zero.', 422);
+            }
+            if ($result['status'] == 'ap_parent_missing') {
+                return $this->errorResponse('AP parent account (4-2100) is missing in COA.', 422);
+            }
+            if ($result['status'] == 'inventory_account_missing') {
+                return $this->errorResponse('Inventory account (2-1024) is missing in COA.', 422);
+            }
+            if ($result['status'] == 'supplier_missing') {
+                return $this->errorResponse('Supplier is required for AP posting.', 422);
+            }
+            if ($result['status'] == 'currency_invalid') {
+                return $this->errorResponse('Transaction currency is invalid.', 422);
+            }
+            if ($result['status'] == 'cashbook_not_found') {
+                return $this->errorResponse('Cashbook not found.', 422);
+            }
+            if ($result['status'] == 'cashbook_currency_mismatch') {
+                return $this->errorResponse('Cashbook currency must be the same as purchase order currency.', 422);
+            }
 
-            return $this->successResponse($result, 200, 'Purchase order payment status updated successfully');
+            return $this->successResponse($result['data'] ?? [], 200, 'Purchase order payment status updated successfully');
         } catch (\Exception $e) {
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
@@ -243,11 +261,11 @@ class PurchaseOrderController extends Controller
             }
 
             $result = $this->purchase_order_service->updateDeliveryStatus((int) $id, $request->input('delivery_status'));
-            if (!$result) {
+            if ($result['status'] == 'item_not_found') {
                 return $this->errorResponse('Purchase order not found', 404);
             }
 
-            return $this->successResponse($result, 200, 'Purchase order delivery status updated successfully');
+            return $this->successResponse($result['data'] ?? [], 200, 'Purchase order delivery status updated successfully');
         } catch (\Exception $e) {
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
@@ -300,4 +318,5 @@ class PurchaseOrderController extends Controller
             return $this->errorResponse('Something went wrong!', 500);
         }
     }
+
 }

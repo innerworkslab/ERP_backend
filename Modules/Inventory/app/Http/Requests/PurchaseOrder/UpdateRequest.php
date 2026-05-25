@@ -32,6 +32,8 @@ class UpdateRequest extends FormRequest
             'lines.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax_id' => ['nullable', 'integer', 'exists:taxs,id'],
             'lines.*.tax_amount' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.expenses_type' => ['nullable', 'in:none,freight,packing,insurance,handling,other'],
+            'lines.*.expenses_amount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.total_amount' => ['required', 'numeric', 'min:0'],
         ];
     }

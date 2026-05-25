@@ -4,15 +4,28 @@ namespace Modules\Inventory\app\Http\Services;
 
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Modules\Accounting\app\Http\Repositories\AccountRepository;
+use Modules\Accounting\app\Models\Account;
+use Modules\Accounting\app\Models\Cashbook;
+use Modules\Accounting\app\Models\CashbookLedger;
+use Modules\Accounting\app\Models\CashbookTransaction;
+use Modules\Accounting\app\Models\JournalEntry;
+use Modules\Accounting\app\Models\JournalPosting;
+use Modules\Organization\app\Models\Currency;
 use Modules\Inventory\app\Http\Repositories\PurchaseOrderRepository;
 
 class PurchaseOrderService
 {
     protected $purchase_order_repository;
+    protected $account_repository;
 
-    public function __construct(PurchaseOrderRepository $purchase_order_repository)
+    public function __construct(
+        PurchaseOrderRepository $purchase_order_repository,
+        AccountRepository $account_repository
+    )
     {
         $this->purchase_order_repository = $purchase_order_repository;
+        $this->account_repository = $account_repository;
     }
 
     public function getDataWithPagination(
@@ -91,14 +104,15 @@ class PurchaseOrderService
                 $existing = $this->purchase_order_repository->find($id);
 
                 if (!$existing) {
-                    return null;
+                    return ['status' => 'item_not_found'];
                 }
 
                 if ($existing->status !== 'pending' && $existing->status !== 'draft') {
-                    throw new \RuntimeException('Only pending or draft purchase order can be updated');
+                    return ['status' => 'invalid_status'];
                 }
 
-                return $this->purchase_order_repository->updateWithLines($id, $attributes);
+                $updated = $this->purchase_order_repository->updateWithLines($id, $attributes);
+                return ['status' => 'success', 'data' => $updated];
             });
         } catch (Exception $e) {
             logger()->error('Error : Failed to update purchase order: ' . $e->getMessage());
@@ -112,14 +126,17 @@ class PurchaseOrderService
             $existing = $this->purchase_order_repository->find($id);
 
             if (!$existing) {
-                return false;
+                return ['status' => 'item_not_found'];
             }
 
             if ($existing->status !== 'pending' && $existing->status !== 'draft') {
-                throw new \RuntimeException('Only pending or draft purchase order can be deleted');
+                return ['status' => 'invalid_status'];
             }
 
-            return DB::transaction(fn() => $this->purchase_order_repository->delete($id));
+            return DB::transaction(function () use ($id) {
+                $this->purchase_order_repository->delete($id);
+                return ['status' => 'success'];
+            });
         } catch (Exception $e) {
             logger()->error('Error : Failed to delete purchase order: ' . $e->getMessage());
             throw $e;
@@ -133,12 +150,12 @@ class PurchaseOrderService
                 $existing = $this->purchase_order_repository->find($id);
 
                 if (!$existing) {
-                    return null;
+                    return ['status' => 'item_not_found'];
                 }
 
                 $this->purchase_order_repository->update($id, ['status' => $status]);
 
-                return $this->purchase_order_repository->find($id);
+                return ['status' => 'success', 'data' => $this->purchase_order_repository->find($id)];
             });
         } catch (Exception $e) {
             logger()->error('Error : Failed to update purchase order status: ' . $e->getMessage());
@@ -146,19 +163,196 @@ class PurchaseOrderService
         }
     }
 
-    public function updatePaymentStatus(int $id, string $paymentStatus)
+    public function updatePaymentStatus(int $id, array $payload = [])
     {
         try {
-            return DB::transaction(function () use ($id, $paymentStatus) {
+            return DB::transaction(function () use ($id, $payload) {
                 $existing = $this->purchase_order_repository->find($id);
 
                 if (!$existing) {
-                    return null;
+                    return ['status' => 'item_not_found'];
                 }
 
-                $this->purchase_order_repository->update($id, ['payment_status' => $paymentStatus]);
+                if ($existing->payment_status === 'paid') {
+                    return ['status' => 'already_paid'];
+                }
 
-                return $this->purchase_order_repository->find($id);
+                $totalAmount = (float) $existing->total_amount;
+                $currencyId = (int) $existing->currency_id;
+                $paidAmount = (float) ($payload['paid_amount'] ?? 0);
+                $cashbookId = $payload['cashbook_id'] ?? null;
+
+                if ($paidAmount > $totalAmount) {
+                    return ['status' => 'paid_amount_exceeded'];
+                }
+
+                if ($paidAmount > 0 && !$cashbookId) {
+                    return ['status' => 'cashbook_required'];
+                }
+
+                $remainingAmount = round($totalAmount - $paidAmount, 2);
+                $normalizedPaymentStatus = $remainingAmount <= 0 ? 'paid' : ($paidAmount > 0 ? 'partially_paid' : 'unpaid');
+
+                $apParent = Account::where('code', '4-2100')->first();
+                if (!$apParent) {
+                    return ['status' => 'ap_parent_missing'];
+                }
+
+                $inventoryAccount = Account::where('code', '2-1024')->first();
+                if (!$inventoryAccount) {
+                    return ['status' => 'inventory_account_missing'];
+                }
+
+                $supplier = $existing->supplier;
+                if (!$supplier) {
+                    return ['status' => 'supplier_missing'];
+                }
+
+                $trxCurrency = Currency::find($currencyId);
+                if (!$trxCurrency) {
+                    return ['status' => 'currency_invalid'];
+                }
+                $exchangeRate = (float) ($trxCurrency->exchange_rate ?: 1);
+
+                $supplierApAccount = Account::where('parent_account_id', $apParent->id)
+                    ->where('name', $supplier->name)
+                    ->first();
+
+                if (!$supplierApAccount) {
+                    $supplierApCode = $this->account_repository->generateAccountCode($apParent->id);
+
+                    $supplierApAccount = Account::create([
+                        'parent_account_id' => $apParent->id,
+                        'code' => $supplierApCode,
+                        'name' => $supplier->name,
+                        'type' => 'Accounts Payable',
+                        'division' => 'SOFP',
+                        'description' => 'Auto generated AP account for supplier #' . $supplier->name,
+                        'is_active' => true,
+                    ]);
+                } else {
+                    if (!$supplierApAccount->is_active) {
+                        $supplierApAccount->update(['is_active' => true]);
+                    }
+                }
+
+                if ($paidAmount > 0) {
+                    $cashbook = Cashbook::lockForUpdate()->find($cashbookId);
+                    if (!$cashbook) {
+                        return ['status' => 'cashbook_not_found'];
+                    }
+
+                    if ((int) $cashbook->currency_id !== $currencyId) {
+                        return ['status' => 'cashbook_currency_mismatch'];
+                    }
+
+                    $lastLedger = CashbookLedger::where('cashbook_id', $cashbook->id)
+                        ->orderByDesc('id')
+                        ->lockForUpdate()
+                        ->first();
+
+                    $beforeBalance = $lastLedger ? (float) $lastLedger->after_balance : (float) $cashbook->current_balance;
+                    $afterBalance = $beforeBalance - $paidAmount;
+
+                    // if ($afterBalance < 0) {
+                    //     throw new \RuntimeException('Insufficient cashbook balance.');
+                    // }
+
+                    $cashbookTransaction = CashbookTransaction::create([
+                        'cashbook_id' => $cashbook->id,
+                        'source_account_id' => $cashbook->account_id,
+                        'destination_account_id' => $supplierApAccount->id,
+                        'transaction_type' => 'out',
+                        'category' => 'others',
+                        'transaction_datetime' => now(),
+                        'currency_id' => $currencyId,
+                        'amount' => $paidAmount,
+                        'base_currency_amount' => round($paidAmount * $exchangeRate, 8),
+                        'reference_no' => 'POPAY-' . now()->format('YmdHis') . '-' . str_pad((string) $existing->id, 6, '0', STR_PAD_LEFT),
+                        'remark' => 'PO Payment',
+                        'description' => 'Payment for purchase order ' . $existing->po_number,
+                        'status' => 'confirmed',
+                        'created_by' => auth()->id(),
+                    ]);
+
+                    CashbookLedger::create([
+                        'cashbook_id' => $cashbook->id,
+                        'cashbook_transaction_id' => $cashbookTransaction->id,
+                        'transaction_datetime' => now(),
+                        'transaction_type' => 'out',
+                        'amount' => $paidAmount,
+                        'before_balance' => $beforeBalance,
+                        'after_balance' => $afterBalance,
+                        'remark' => 'PO Payment',
+                        'description' => 'Cashbook outflow for PO ' . $existing->po_number,
+                    ]);
+
+                    $cashbook->update([
+                        'current_balance' => $afterBalance,
+                        'updated_by' => auth()->id(),
+                    ]);
+                }
+
+                $voucherPrefix = 'JV-' . now()->format('Ymd') . '-';
+                $lastVoucher = JournalEntry::where('voucher_no', 'like', $voucherPrefix . '%')
+                    ->orderByDesc('id')
+                    ->value('voucher_no');
+                $nextVoucherSeq = 1;
+                if ($lastVoucher) {
+                    $nextVoucherSeq = ((int) substr($lastVoucher, -4)) + 1;
+                }
+
+                $journalEntry = JournalEntry::create([
+                    'voucher_no' => $voucherPrefix . str_pad((string) $nextVoucherSeq, 4, '0', STR_PAD_LEFT),
+                    'journal_date' => now()->toDateString(),
+                    'journal_datetime' => now(),
+                    'source_type' => 'purchase_order',
+                    'source_id' => $existing->id,
+                    'description' => 'PO payment/AP posting for ' . $existing->po_number,
+                ]);
+
+                $baseTotalAmount = round($totalAmount * $exchangeRate, 8);
+                $basePaidAmount = round($paidAmount * $exchangeRate, 8);
+                $baseRemainingAmount = round($remainingAmount * $exchangeRate, 8);
+
+                JournalPosting::create([
+                    'journal_entry_id' => $journalEntry->id,
+                    'account_id' => $inventoryAccount->id,
+                    'type' => 'debit',
+                    'currency_id' => $currencyId,
+                    'amount' => $totalAmount,
+                    'base_currency_amount' => $baseTotalAmount,
+                ]);
+
+                if ($paidAmount > 0) {
+                    $cashbook = Cashbook::find($cashbookId);
+                    JournalPosting::create([
+                        'journal_entry_id' => $journalEntry->id,
+                        'account_id' => $cashbook->account_id,
+                        'type' => 'credit',
+                        'currency_id' => $currencyId,
+                        'amount' => $paidAmount,
+                        'base_currency_amount' => $basePaidAmount,
+                    ]);
+                }
+
+                if ($remainingAmount > 0) {
+                    JournalPosting::create([
+                        'journal_entry_id' => $journalEntry->id,
+                        'account_id' => $supplierApAccount->id,
+                        'type' => 'credit',
+                        'currency_id' => $currencyId,
+                        'amount' => $remainingAmount,
+                        'base_currency_amount' => $baseRemainingAmount,
+                    ]);
+                }
+
+                $this->purchase_order_repository->update($id, [
+                    'paid_amount' => round($paidAmount, 2),
+                    'payment_status' => $normalizedPaymentStatus,
+                ]);
+
+                return ['status' => 'success', 'data' => $this->purchase_order_repository->find($id)];
             });
         } catch (Exception $e) {
             logger()->error('Error : Failed to update purchase order payment status: ' . $e->getMessage());
@@ -173,12 +367,12 @@ class PurchaseOrderService
                 $existing = $this->purchase_order_repository->find($id);
 
                 if (!$existing) {
-                    return null;
+                    return ['status' => 'item_not_found'];
                 }
 
                 $this->purchase_order_repository->update($id, ['delivery_status' => $deliveryStatus]);
 
-                return $this->purchase_order_repository->find($id);
+                return ['status' => 'success', 'data' => $this->purchase_order_repository->find($id)];
             });
         } catch (Exception $e) {
             logger()->error('Error : Failed to update purchase order delivery status: ' . $e->getMessage());
@@ -203,15 +397,17 @@ class PurchaseOrderService
             $unitPrice = (float) ($attributes['unit_price'] ?? 0);
             $discountAmount = (float) ($attributes['discount_amount'] ?? 0);
             $taxAmount = (float) ($attributes['tax_amount'] ?? 0);
+            $expensesAmount = (float) ($attributes['expenses_amount'] ?? 0);
 
             $grossAmount = $quantity * $unitPrice;
-            $lineTotal = $grossAmount - $discountAmount + $taxAmount;
+            $lineTotal = $grossAmount - $discountAmount + $taxAmount - $expensesAmount;
 
             return [
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
                 'discount_amount' => $discountAmount,
                 'tax_amount' => $taxAmount,
+                'expenses_amount' => $expensesAmount,
                 'gross_amount' => round($grossAmount, 2),
                 'line_total' => round($lineTotal, 2),
             ];
@@ -267,4 +463,5 @@ class PurchaseOrderService
 
         return 'INW-PO-' . $datePart . '-' . str_pad($newId, 4, '0', STR_PAD_LEFT);
     }
+
 }
