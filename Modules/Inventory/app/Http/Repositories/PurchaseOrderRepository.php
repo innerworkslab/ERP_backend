@@ -128,6 +128,8 @@ class PurchaseOrderRepository extends BaseRepo
             'discount_amount' => $line['discount_amount'] ?? 0,
             'tax_id' => $line['tax_id'] ?? null,
             'tax_amount' => $line['tax_amount'] ?? 0,
+            'expenses_type' => $line['expenses_type'] ?? 'none',
+            'expenses_amount' => $line['expenses_amount'] ?? 0,
             'line_total' => $line['line_total'] ?? $line['total_amount'],
         ];
     }

@@ -28,6 +28,8 @@ class PurchaseOrderLine extends Model
         'discount_amount',
         'tax_id',
         'tax_amount',
+        'expenses_type',
+        'expenses_amount',
         'line_total',
     ];
 

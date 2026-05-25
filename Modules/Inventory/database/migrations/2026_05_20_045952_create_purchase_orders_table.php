@@ -23,7 +23,8 @@ return new class extends Migration
             $table->decimal('discount_amount', 15, 2);
             $table->decimal('tax_amount', 15, 2);
             $table->decimal('total_amount', 15, 2);
-            $table->enum('status', ['pending', 'draft', 'ordered','cancelled'])->default('pending');
+            $table->decimal('paid_amount', 15, 2)->default(0);
+            $table->enum('status', ['pending', 'ordering', 'received', 'partially_received', 'cancelled'])->default('pending');
             $table->enum('payment_status', ['unpaid', 'partially_paid', 'paid'])->default('unpaid');
             $table->enum('delivery_status', ['not_delivered', 'partially_delivered', 'fully_delivered'])->default('not_delivered');
             $table->text('remarks')->nullable();

@@ -24,6 +24,8 @@ return new class extends Migration
             $table->decimal('discount_amount', 15, 2)->nullable();
             $table->unsignedBigInteger('tax_id')->nullable();
             $table->decimal('tax_amount', 15, 2);
+            $table->enum('expenses_type', ['none', 'freight', 'packing', 'insurance','handling','other'])->default('none');
+            $table->decimal('expenses_amount', 15, 2)->default(0);
             $table->decimal('line_total', 15, 2);
             $table->timestamps();
 
