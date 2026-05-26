@@ -7,7 +7,10 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Modules\Accounting\app\Http\Repositories\BaseRepo;
 use Modules\Accounting\app\Models\Account;
+use Modules\Accounting\app\Models\CashbookLedger;
 use Modules\Accounting\app\Models\CashbookTransaction;
+use Modules\Accounting\app\Models\JournalEntry;
+use Modules\Accounting\app\Models\JournalPosting;
 use Modules\Organization\app\Models\Currency;
 
 
@@ -191,5 +194,47 @@ class CashbookTransactionRepository extends BaseRepo
             default
             => 'other',
         };
+    }
+
+    public function confirm($id)
+    {
+        $transaction = $this->model->find($id);
+        $last_ledger_record = CashbookLedger::where('cashbook_id', $transaction->cashbook_id)->latest()->first();
+        if ($transaction->transaction_type == 'in') {
+            $after_balance = $last_ledger_record->after_balance + $transaction->amount;
+        } else {
+            $after_balance = $last_ledger_record->after_balance - $transaction->amount;
+        }
+        CashbookLedger::create([
+            'cashbook_id' => $transaction->cashbook_id,
+            'cashbook_transaction_id' => $id,
+            'transaction_datetime' => now(),
+            'transaction_type' => $transaction->transaction_type,
+            'amount' => $transaction->amount,
+            'before_balance' => $last_ledger_record->after_balance,
+            'after_balance' => $after_balance,
+            'remark' => "Transaction: " . $transaction->reference_no,
+            'description' => null,
+        ]);
+        $transaction->cashbook->current_balance = $after_balance;
+        $transaction->cashbook->save();
+    }
+
+    public function addJournalData($transaction)
+    {
+        $entry = JournalEntry::create([
+            'journal_datetime' => now(),
+            'source_type' => CashbookTransaction::class,
+            'source_id' => $transaction->id,
+        ]);
+
+        // JournalPosting::create([
+        //     'journal_entry_id' => $entry->id,
+        //     'account_id' => $transaction->source_account_id,
+        //     'type' => $transaction->transaction_type == 'in' ? 'debit' : 'credit',
+        //     'currency_id' => $transaction->currency_id,
+        //     'amount' =>,
+        //     'base_currency_amount',
+        // ]);
     }
 }
