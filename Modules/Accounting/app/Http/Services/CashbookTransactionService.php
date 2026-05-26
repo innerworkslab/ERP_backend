@@ -87,9 +87,9 @@ class CashbookTransactionService
         }
     }
 
-    public function toggleCashbookStatus($data)
+    public function confirm($id)
     {
-        $this->cashbook_transaction_repository->toggleActive($data);
+        $this->cashbook_transaction_repository->confirm($id);
     }
 
     public function whereFirst($column, $value)

@@ -124,7 +124,6 @@ class CashbookTransactionController extends Controller
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
         }
-
     }
 
     public function delete($id)
@@ -147,16 +146,19 @@ class CashbookTransactionController extends Controller
         }
     }
 
-    public function toggleActive($id)
+    public function confirm($id)
     {
         try {
-            if (!is_numeric($id)) {
-                return $this->errorResponse('ID must be an integer!', 422);
-            }
             $data = $this->cashbook_transaction_service->whereFirst('id', $id);
             if ($data) {
-                $this->cashbook_transaction_service->toggleCashbookStatus($data);
-                return $this->successResponse([], 200, 'Toggle status successfully');
+                if ($data->status == "confirmed") {
+                    return $this->errorResponse("already confirmed. Cannot edit.", 409);
+                }
+                if ($data->status == "cancelled") {
+                    return $this->errorResponse("already cancelled. Cannot edit.", 409);
+                }
+                $result = $this->cashbook_transaction_service->confirm($id);
+                return $this->successResponse($result, 200, 'Cashbook Transaction is confirmed successfully');
             } else {
                 return $this->errorResponse('Cashbook Transaction not found', 404);
             }
