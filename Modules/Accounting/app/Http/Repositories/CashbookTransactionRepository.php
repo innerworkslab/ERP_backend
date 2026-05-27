@@ -106,7 +106,7 @@ class CashbookTransactionRepository extends BaseRepo
     {
         $datePrefix = now()->format('Ymd');
 
-        $prefix = "CBT-{$datePrefix}-";
+        $prefix = "CBTS-{$datePrefix}-";
 
         $latestTransaction = CashbookTransaction::where('reference_no', 'LIKE', $prefix . '%')
             ->latest('id')
@@ -199,25 +199,33 @@ class CashbookTransactionRepository extends BaseRepo
     public function confirm($id)
     {
         $transaction = $this->model->find($id);
+
+        //cashbook ledger entry creation and cashbook balance update
         $last_ledger_record = CashbookLedger::where('cashbook_id', $transaction->cashbook_id)->latest()->first();
+        $before_balance = $last_ledger_record ? (float) $last_ledger_record->after_balance : (float) $transaction->cashbook->current_balance;
+
         if ($transaction->transaction_type == 'in') {
-            $after_balance = $last_ledger_record->after_balance + $transaction->amount;
+            $after_balance = $before_balance + $transaction->amount;
         } else {
-            $after_balance = $last_ledger_record->after_balance - $transaction->amount;
+            $after_balance = $before_balance - $transaction->amount;
         }
+
         CashbookLedger::create([
             'cashbook_id' => $transaction->cashbook_id,
             'cashbook_transaction_id' => $id,
             'transaction_datetime' => now(),
             'transaction_type' => $transaction->transaction_type,
             'amount' => $transaction->amount,
-            'before_balance' => $last_ledger_record->after_balance,
+            'before_balance' => $before_balance,
             'after_balance' => $after_balance,
             'remark' => "Transaction: " . $transaction->reference_no,
             'description' => null,
         ]);
+
         $transaction->cashbook->current_balance = $after_balance;
         $transaction->cashbook->save();
+
+        $this->addJournalData($transaction);
     }
 
     public function addJournalData($transaction)
@@ -226,15 +234,27 @@ class CashbookTransactionRepository extends BaseRepo
             'journal_datetime' => now(),
             'source_type' => CashbookTransaction::class,
             'source_id' => $transaction->id,
+            'description' => "Cashbook Transaction: " . $transaction->reference_no,
         ]);
 
-        // JournalPosting::create([
-        //     'journal_entry_id' => $entry->id,
-        //     'account_id' => $transaction->source_account_id,
-        //     'type' => $transaction->transaction_type == 'in' ? 'debit' : 'credit',
-        //     'currency_id' => $transaction->currency_id,
-        //     'amount' =>,
-        //     'base_currency_amount',
-        // ]);
+        $base_currency_amount = (float) $transaction->base_currency_amount;
+
+        JournalPosting::create([
+            'journal_entry_id' => $entry->id,
+            'account_id' => $transaction->source_account_id,
+            'type' => $transaction->transaction_type == 'in' ? 'debit' : 'credit',
+            'currency_id' => $transaction->currency_id,
+            'amount' => $transaction->amount,
+            'base_currency_amount' => $base_currency_amount,
+        ]);
+
+        JournalPosting::create([
+            'journal_entry_id' => $entry->id,
+            'account_id' => $transaction->destination_account_id,
+            'type' => $transaction->transaction_type == 'in' ? 'credit' : 'debit',
+            'currency_id' => $transaction->currency_id,
+            'amount' => $transaction->amount,
+            'base_currency_amount' => $base_currency_amount,
+        ]);
     }
 }
