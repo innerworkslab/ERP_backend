@@ -30,7 +30,7 @@ return new class extends Migration {
             ]);
 
             $table->index([
-                'journal_date'
+                'journal_datetime'
             ]);
         });
     }

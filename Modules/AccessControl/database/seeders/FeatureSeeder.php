@@ -238,6 +238,14 @@ class FeatureSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'Cashbook Transfer',
+                'key' => 'cashbook_transfer_feature',
+                'module' => 'Accounting',
+                'description' => 'This is a feature of cashbook transfer',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
         ];
 
         foreach ($features as $feature) {

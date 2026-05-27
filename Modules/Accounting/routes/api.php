@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Accounting\app\Http\Controllers\AccountController;
 use Modules\Accounting\app\Http\Controllers\CashbookController;
 use Modules\Accounting\app\Http\Controllers\CashbookTransactionController;
+use Modules\Accounting\app\Http\Controllers\CashbookTransferController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/accounts')->group(function () {
@@ -24,5 +25,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('', [CashbookTransactionController::class, 'create'])->middleware('permission:create_cashbook_transaction');
         Route::post('{id}', [CashbookTransactionController::class, 'update'])->middleware('permission:update_cashbook_transaction');
         Route::get('{id}', [CashbookTransactionController::class, 'findOrFail'])->middleware('permission:view_cashbook_transaction');
+    });
+
+    Route::prefix('v1/cashbook-transfers')->group(function () {
+        Route::patch('{id}/confirm', [CashbookTransferController::class, 'confirmTransfer'])->middleware('permission:confirm_cashbook_transfer');
+        Route::patch('{id}/reject', [CashbookTransferController::class, 'rejectTransfer'])->middleware('permission:update_cashbook_transfer');
+        Route::get('', [CashbookTransferController::class, 'index'])->middleware('permission:view_cashbook_transfer');
+        Route::post('', [CashbookTransferController::class, 'create'])->middleware('permission:create_cashbook_transfer');
+        Route::put('{id}', [CashbookTransferController::class, 'update'])->middleware('permission:update_cashbook_transfer');
+        Route::get('{id}', [CashbookTransferController::class, 'findOrFail'])->middleware('permission:view_cashbook_transfer');
     });
 });
