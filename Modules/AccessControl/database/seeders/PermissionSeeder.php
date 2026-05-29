@@ -239,6 +239,15 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Confirm Cashbook Transfer', 'key' => 'confirm_cashbook_transfer'],
                 ['name' => 'Delete Cashbook Transfer', 'key' => 'delete_cashbook_transfer'],
             ],
+
+            // Cashbook Adjustment
+            'cashbook_adjustment_feature' => [
+                ['name' => 'View Cashbook Adjustment', 'key' => 'view_cashbook_adjustment'],
+                ['name' => 'Create Cashbook Adjustment', 'key' => 'create_cashbook_adjustment'],
+                ['name' => 'Update Cashbook Adjustment', 'key' => 'update_cashbook_adjustment'],
+                ['name' => 'Approve Cashbook Adjustment', 'key' => 'approve_cashbook_adjustment'],
+                ['name' => 'Delete Cashbook Adjustment', 'key' => 'delete_cashbook_adjustment'],
+            ],
         ];
 
         foreach ($permissions as $key => $perms) {
