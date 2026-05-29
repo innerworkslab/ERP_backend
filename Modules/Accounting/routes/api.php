@@ -5,6 +5,7 @@ use Modules\Accounting\app\Http\Controllers\AccountController;
 use Modules\Accounting\app\Http\Controllers\CashbookController;
 use Modules\Accounting\app\Http\Controllers\CashbookTransactionController;
 use Modules\Accounting\app\Http\Controllers\CashbookTransferController;
+use Modules\Accounting\app\Http\Controllers\CashbookAdjustmentController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/accounts')->group(function () {
@@ -34,5 +35,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('', [CashbookTransferController::class, 'create'])->middleware('permission:create_cashbook_transfer');
         Route::put('{id}', [CashbookTransferController::class, 'update'])->middleware('permission:update_cashbook_transfer');
         Route::get('{id}', [CashbookTransferController::class, 'findOrFail'])->middleware('permission:view_cashbook_transfer');
+    });
+
+    //adjustment routes
+    Route::prefix('v1/cashbook-adjustments')->group(function () {
+        Route::patch('{id}/approve', [CashbookAdjustmentController::class, 'approve'])->middleware('permission:approve_cashbook_adjustment');
+        Route::patch('{id}/reject', [CashbookAdjustmentController::class, 'reject'])->middleware('permission:update_cashbook_adjustment');
+        Route::get('', [CashbookAdjustmentController::class, 'index'])->middleware('permission:view_cashbook_adjustment');
+        Route::post('', [CashbookAdjustmentController::class, 'create'])->middleware('permission:create_cashbook_adjustment');
+        Route::put('{id}', [CashbookAdjustmentController::class, 'update'])->middleware('permission:update_cashbook_adjustment');
+        Route::get('{id}', [CashbookAdjustmentController::class, 'findOrFail'])->middleware('permission:view_cashbook_adjustment');
     });
 });
