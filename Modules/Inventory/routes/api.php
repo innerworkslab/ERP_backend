@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Inventory\app\Http\Controllers\InventoryController;
+use Modules\Inventory\app\Http\Controllers\GoodsReceiveNotesController;
 use Modules\Inventory\app\Http\Controllers\OpeningStockController;
 use Modules\Inventory\app\Http\Controllers\PurchaseOrderController;
 use Modules\Inventory\app\Http\Controllers\StockBalanceController;
@@ -74,8 +75,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('{id}', [PurchaseOrderController::class, 'destroy'])->middleware('permission:delete_purchase_order');
         Route::put('{id}/status', [PurchaseOrderController::class, 'updateStatus'])->middleware('permission:update_purchase_order');
         Route::put('{id}/payment-status', [PurchaseOrderController::class, 'updatePaymentStatus'])->middleware('permission:update_purchase_order');
-        Route::put('{id}/delivery-status', [PurchaseOrderController::class, 'updateDeliveryStatus'])->middleware('permission:update_purchase_order');
+        // Route::put('{id}/delivery-status', [PurchaseOrderController::class, 'updateDeliveryStatus'])->middleware('permission:update_purchase_order');
     });
 
-        
+    Route::prefix('v1/goods-receive-notes')->group(function () {
+        Route::get('', [GoodsReceiveNotesController::class, 'index'])->middleware('permission:view_goods_receive_note');
+        Route::post('', [GoodsReceiveNotesController::class, 'store'])->middleware('permission:create_goods_receive_note');
+        Route::get('{id}', [GoodsReceiveNotesController::class, 'show'])->middleware('permission:view_goods_receive_note');
+        Route::put('{id}', [GoodsReceiveNotesController::class, 'update'])->middleware('permission:update_goods_receive_note');
+        Route::delete('{id}', [GoodsReceiveNotesController::class, 'delete'])->middleware('permission:delete_goods_receive_note');
+        Route::patch('{id}/approve', [GoodsReceiveNotesController::class, 'approve'])->middleware('permission:approve_goods_receive_note');
+        Route::patch('{id}/reject', [GoodsReceiveNotesController::class, 'reject'])->middleware('permission:reject_goods_receive_note');
+    });
 });

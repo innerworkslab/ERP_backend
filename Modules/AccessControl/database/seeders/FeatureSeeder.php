@@ -215,6 +215,14 @@ class FeatureSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'name' => 'Goods Receive Note',
+                'key' => 'goods_receive_note_feature',
+                'module' => 'Inventory',
+                'description' => 'This is a feature of goods receive note',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'name' => 'Account',
                 'key' => 'account_feature',
                 'module' => 'Accounting',
