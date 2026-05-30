@@ -204,6 +204,15 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Update Purchase Order', 'key' => 'update_purchase_order'],
                 ['name' => 'Delete Purchase Order', 'key' => 'delete_purchase_order'],
             ],
+
+            'goods_receive_note_feature' => [
+                ['name' => 'View Goods Receive Note', 'key' => 'view_goods_receive_note'],
+                ['name' => 'Create Goods Receive Note', 'key' => 'create_goods_receive_note'],
+                ['name' => 'Update Goods Receive Note', 'key' => 'update_goods_receive_note'],
+                ['name' => 'Delete Goods Receive Note', 'key' => 'delete_goods_receive_note'],
+                ['name' => 'Approve Goods Receive Note', 'key' => 'approve_goods_receive_note'],
+                ['name' => 'Reject Goods Receive Note', 'key' => 'reject_goods_receive_note'],
+            ],
             
             // Location
             'location_feature' => [
