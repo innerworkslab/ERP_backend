@@ -95,6 +95,7 @@ class StockLedgerService
             ? abs((float) $attributes['total_cost'])
             : $quantity * $unitCost;
         $attributes['total_cost'] = $baseTotalCost * $sign;
+        unset($attributes['branch_name']);
 
         return $attributes;
     }

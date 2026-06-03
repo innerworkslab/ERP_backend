@@ -5,6 +5,7 @@ use Modules\Inventory\app\Http\Controllers\InventoryController;
 use Modules\Inventory\app\Http\Controllers\GoodsReceiveNotesController;
 use Modules\Inventory\app\Http\Controllers\OpeningStockController;
 use Modules\Inventory\app\Http\Controllers\PurchaseOrderController;
+use Modules\Inventory\app\Http\Controllers\PurchaseReturnController;
 use Modules\Inventory\app\Http\Controllers\StockBalanceController;
 use Modules\Inventory\app\Http\Controllers\StockMovementController;
 use Modules\Inventory\app\Http\Controllers\StockTransferController;
@@ -82,9 +83,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('', [GoodsReceiveNotesController::class, 'index'])->middleware('permission:view_goods_receive_note');
         Route::post('', [GoodsReceiveNotesController::class, 'store'])->middleware('permission:create_goods_receive_note');
         Route::get('{id}', [GoodsReceiveNotesController::class, 'show'])->middleware('permission:view_goods_receive_note');
+        Route::get('{id}/returnable-lines', [PurchaseReturnController::class, 'returnableLines'])->middleware('permission:view_goods_receive_note');
         Route::put('{id}', [GoodsReceiveNotesController::class, 'update'])->middleware('permission:update_goods_receive_note');
         Route::delete('{id}', [GoodsReceiveNotesController::class, 'delete'])->middleware('permission:delete_goods_receive_note');
         Route::patch('{id}/approve', [GoodsReceiveNotesController::class, 'approve'])->middleware('permission:approve_goods_receive_note');
         Route::patch('{id}/reject', [GoodsReceiveNotesController::class, 'reject'])->middleware('permission:reject_goods_receive_note');
+    });
+
+    Route::prefix('v1/purchase-returns')->group(function () {
+        Route::get('', [PurchaseReturnController::class, 'index'])->middleware('permission:view_purchase_return');
+        Route::post('', [PurchaseReturnController::class, 'store'])->middleware('permission:create_purchase_return');
+        Route::get('{id}', [PurchaseReturnController::class, 'show'])->middleware('permission:view_purchase_return');
+        Route::put('{id}', [PurchaseReturnController::class, 'update'])->middleware('permission:update_purchase_return');
+        Route::patch('{id}/approve', [PurchaseReturnController::class, 'approve'])->middleware('permission:approve_purchase_return');
+        Route::patch('{id}/reject', [PurchaseReturnController::class, 'reject'])->middleware('permission:reject_purchase_return');
     });
 });
