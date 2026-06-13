@@ -24,7 +24,7 @@ return new class extends Migration
             $table->decimal('good_quantity', 15, 2);
             $table->decimal('short_quantity', 15, 2)->default(0);
             $table->enum('discrepancy_reason', ['none', 'cashback', 'defect'])->default('none');
-            $table->enum('defect_responsibility', ['supplier_side', 'company_side'])->nullable();
+            $table->enum('defect_responsibility', ['none','supplier_side', 'company_side'])->nullable();
             $table->decimal('unit_price', 15, 2);
             $table->decimal('line_weight', 15, 4)->default(0);
             $table->decimal('allocated_charge_amount', 15, 2)->default(0);
