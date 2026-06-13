@@ -13,6 +13,10 @@ return new class extends Migration {
         Schema::create('journal_entries', function (Blueprint $table) {
             $table->id();
 
+            $table->string('voucher_no')->nullable();
+
+            $table->date('journal_date')->nullable();
+
             $table->dateTime('journal_datetime');
 
             $table->string('source_type')->nullable();
