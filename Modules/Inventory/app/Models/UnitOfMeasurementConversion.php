@@ -14,6 +14,7 @@ class UnitOfMeasurementConversion extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'conversions_name',
         'base_unit_id',
         'conversion_unit_id',
         'conversion_rate',

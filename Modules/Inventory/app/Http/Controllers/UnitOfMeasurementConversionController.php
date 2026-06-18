@@ -32,8 +32,20 @@ class UnitOfMeasurementConversionController extends Controller
             $validated = $request->validated();
             $per_page = array_key_exists('per_page', $validated) ? $validated['per_page'] : 20;
             $page = array_key_exists('page', $validated) ? $validated['page'] : 1;
+            $searches = [];
             $conditions = [];
             $status = null;
+
+            if (!empty($validated['search'])) {
+                $search = $validated['search'];
+                $searches = [
+                    'conversions_name' => $search,
+                ];
+            }
+
+            if (!empty($validated['conversions_name'])) {
+                $searches['conversions_name'] = $validated['conversions_name'];
+            }
 
             if (!empty($validated['status'])) {
                 $conditions['status'] = $validated['status'];
@@ -45,7 +57,7 @@ class UnitOfMeasurementConversionController extends Controller
                 $conditions['conversion_unit_id'] = $validated['conversion_unit_id'];
             }
             $with = ['created_by', 'updated_by', 'baseUnit', 'conversionUnit'];
-            $res_data = $this->uom_conversion_service->getDataWithPagination($per_page, $page, status: $status, with: $with, conditions: $conditions);
+            $res_data = $this->uom_conversion_service->getDataWithPagination($per_page, $page, status: $status, searches: $searches, with: $with, conditions: $conditions);
             return $this->paginatedSuccessResponse($res_data, 200, 'UOM Conversion Lists');
         } catch (\Exception $e) {
             logger()->error($e);

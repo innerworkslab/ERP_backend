@@ -12,6 +12,7 @@ return new class extends Migration {
     {
         Schema::create('unit_of_measurement_conversions', function (Blueprint $table) {
             $table->id();
+            $table->string('conversions_name');
             $table->foreignId('base_unit_id')
                 ->constrained('unit_of_measurements')
                 ->cascadeOnDelete();
@@ -36,8 +37,10 @@ return new class extends Migration {
 
             $table->timestamps();
             $table->softDeletes();
+
+            $table->unique('conversions_name');
             
-            $table->unique(['base_unit_id', 'conversion_unit_id'], 'uom_conversion_unique');
+            // $table->unique(['base_unit_id', 'conversion_unit_id'], 'uom_conversion_unique');
         });
     }
 
