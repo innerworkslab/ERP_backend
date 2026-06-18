@@ -26,7 +26,7 @@ class UnitOfMeasurementConversionService
         ?string $status = null
     ) {
         try {
-            $result = $this->uom_repository->getDataWithPagination(page: $page, perPage: $perPage, status: $status, with: $with, conditions: $conditions);
+            $result = $this->uom_repository->getDataWithPagination(page: $page, perPage: $perPage, status: $status, searches: $searches, with: $with, conditions: $conditions);
             return $result;
         } catch (Exception $e) {
             logger()->error('Error : Failed to fetch uom conversion data with pagination: ' . $e->getMessage());
@@ -48,6 +48,7 @@ class UnitOfMeasurementConversionService
     public function create(array $attributes)
     {
         try {
+            $attributes['conversions_name'] = $attributes['conversions_name'];
             $attributes['created_by'] = auth()->user()->id;
             $result = $this->uom_repository->create($attributes);
             return $result;
@@ -60,6 +61,7 @@ class UnitOfMeasurementConversionService
     public function update(int $id, array $attributes)
     {
         try {
+            $attributes['conversions_name'] = $attributes['conversions_name'];
             $attributes['updated_by'] = auth()->user()->id;
             $result = $this->uom_repository->update($id, $attributes);
             return $result;
