@@ -2,6 +2,7 @@
 
 namespace Modules\Inventory\app\Http\Repositories;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class StockBalanceRepository
@@ -14,8 +15,24 @@ class StockBalanceRepository
     ): array {
         $nearExpiryDays = max(1, $nearExpiryDays);
 
+        $dateFrom = Carbon::parse($filters['date_from'] ?? now()->toDateString())->toDateString();
+        $dateTo = Carbon::parse($filters['date_to'] ?? $dateFrom)->toDateString();
+        $expiryLimitDate = Carbon::parse($dateTo)->addDays($nearExpiryDays)->toDateString();
+
         $lotBalanceSub = DB::table('stock_movements as sm')
-            ->selectRaw("sm.product_id, sm.inventory_id, COALESCE(sm.lot_no, '') as lot_no, SUM(sm.quantity) as on_hand_qty, SUM(sm.total_cost) as total_stock_value, MAX(sm.transaction_date) as last_movement_date")
+            ->selectRaw(
+                "sm.product_id,
+                sm.inventory_id,
+                COALESCE(sm.lot_no, '') as lot_no,
+                SUM(CASE WHEN DATE(sm.transaction_date) < '{$dateFrom}' THEN sm.quantity ELSE 0 END) as opening_qty,
+                SUM(CASE WHEN DATE(sm.transaction_date) BETWEEN '{$dateFrom}' AND '{$dateTo}' THEN sm.quantity ELSE 0 END) as period_qty,
+                SUM(CASE WHEN DATE(sm.transaction_date) <= '{$dateTo}' THEN sm.quantity ELSE 0 END) as closing_qty,
+                SUM(CASE WHEN DATE(sm.transaction_date) < '{$dateFrom}' THEN sm.total_cost ELSE 0 END) as opening_cost,
+                SUM(CASE WHEN DATE(sm.transaction_date) BETWEEN '{$dateFrom}' AND '{$dateTo}' THEN sm.total_cost ELSE 0 END) as period_cost,
+                SUM(CASE WHEN DATE(sm.transaction_date) <= '{$dateTo}' THEN sm.total_cost ELSE 0 END) as closing_cost,
+                MAX(sm.transaction_date) as last_movement_date"
+            )
+            ->whereDate('sm.transaction_date', '<=', $dateTo)
             ->groupBy('sm.product_id', 'sm.inventory_id', DB::raw("COALESCE(sm.lot_no, '')"));
 
         $inventoryBranchSub = DB::table('branch_inventory as bi')
@@ -47,7 +64,8 @@ class StockBalanceRepository
             ->leftJoinSub($collectionSub, 'pc', function ($join) {
                 $join->on('pc.product_id', '=', 'p.id');
             })
-            ->selectRaw("p.image_url as product_image,
+            ->selectRaw(
+                "p.image_url as product_image,
                 p.name as product_name,
                 p.sku,
                 NULL as barcode,
@@ -56,13 +74,20 @@ class StockBalanceRepository
                 ib.branch_names,
                 i.name as inventory_name,
                 uom.name as stock_uom,
-                lb.on_hand_qty as on_hand_quantity,
+                lb.opening_qty as opening_quantity,
+                lb.period_qty as movement_quantity,
+                lb.closing_qty as closing_quantity,
+                lb.closing_qty as running_quantity,
+                lb.opening_cost as opening_stock_value,
+                lb.period_cost as movement_stock_value,
+                lb.closing_cost as closing_stock_value,
+                lb.closing_qty as on_hand_quantity,
                 0 as reserved_quantity,
-                lb.on_hand_qty as available_quantity,
+                lb.closing_qty as available_quantity,
                 p.alert_quantity as reorder_level,
-                CASE WHEN lb.on_hand_qty = 0 THEN 0 ELSE ROUND(lb.total_stock_value / lb.on_hand_qty, 4) END as unit_cost,
-                lb.total_stock_value,
-                ROUND(lb.total_stock_value * COALESCE(cur.exchange_rate, 1), 4) as base_currency_value,
+                CASE WHEN lb.closing_qty = 0 THEN 0 ELSE ROUND(lb.closing_cost / lb.closing_qty, 4) END as unit_cost,
+                lb.closing_cost as total_stock_value,
+                ROUND(lb.closing_cost * COALESCE(cur.exchange_rate, 1), 4) as base_currency_value,
                 lb.lot_no,
                 pl.expired_date,
                 pl.serial_no,
@@ -70,12 +95,13 @@ class StockBalanceRepository
                 p.status,
                 CASE
                     WHEN pl.expired_date IS NULL THEN NULL
-                    WHEN pl.expired_date < CURDATE() THEN 'Expired'
-                    WHEN pl.expired_date <= DATE_ADD(CURDATE(), INTERVAL " . $nearExpiryDays . " DAY) THEN 'Nearly Expired'
+                    WHEN pl.expired_date < '{$dateTo}' THEN 'Expired'
+                    WHEN pl.expired_date <= DATE_ADD('{$dateTo}', INTERVAL {$nearExpiryDays} DAY) THEN 'Nearly Expired'
                     ELSE NULL
                 END as expiry_remark,
-                pc.collection_names")
-            ->where('lb.on_hand_qty', '<>', 0);
+                pc.collection_names"
+            )
+            ->where('lb.closing_qty', '<>', 0);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -141,19 +167,19 @@ class StockBalanceRepository
 
         if (!empty($filters['expiry_status'])) {
             if ($filters['expiry_status'] === 'expired') {
-                $query->whereNotNull('pl.expired_date')->whereDate('pl.expired_date', '<', now()->toDateString());
+                $query->whereNotNull('pl.expired_date')->whereDate('pl.expired_date', '<', $dateTo);
             }
 
             if ($filters['expiry_status'] === 'nearly_expired') {
                 $query->whereNotNull('pl.expired_date')
-                    ->whereDate('pl.expired_date', '>=', now()->toDateString())
-                    ->whereDate('pl.expired_date', '<=', now()->addDays($nearExpiryDays)->toDateString());
+                    ->whereDate('pl.expired_date', '>=', $dateTo)
+                    ->whereDate('pl.expired_date', '<=', $expiryLimitDate);
             }
 
             if ($filters['expiry_status'] === 'fresh') {
-                $query->where(function ($q) use ($nearExpiryDays) {
+                $query->where(function ($q) use ($expiryLimitDate) {
                     $q->whereNull('pl.expired_date')
-                        ->orWhereDate('pl.expired_date', '>', now()->addDays($nearExpiryDays)->toDateString());
+                        ->orWhereDate('pl.expired_date', '>', $expiryLimitDate);
                 });
             }
         }
@@ -174,6 +200,8 @@ class StockBalanceRepository
                 'per_page' => $perPage,
                 'current_page' => $page,
                 'total_pages' => (int) ceil($totalCount / $perPage),
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
             ],
         ];
     }

@@ -31,9 +31,13 @@ class StockBalanceController extends Controller
             $perPage = array_key_exists('per_page', $validated) ? (int) $validated['per_page'] : 20;
             $page = array_key_exists('page', $validated) ? (int) $validated['page'] : 1;
             $nearExpiryDays = array_key_exists('near_expiry_days', $validated) ? (int) $validated['near_expiry_days'] : 30;
+            $dateFrom = $validated['date_from'] ?? now()->toDateString();
+            $dateTo = $validated['date_to'] ?? $dateFrom;
 
             $filters = [
                 'search' => $validated['search'] ?? null,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
                 'branch_id' => isset($validated['branch_id']) ? (int) $validated['branch_id'] : null,
                 'inventory_id' => isset($validated['inventory_id']) ? (int) $validated['inventory_id'] : null,
                 'product_id' => isset($validated['product_id']) ? (int) $validated['product_id'] : null,

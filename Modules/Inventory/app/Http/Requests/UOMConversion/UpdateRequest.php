@@ -25,20 +25,21 @@ class UpdateRequest extends FormRequest
         $id = $this->route('id');
 
         return [
+            'conversions_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('unit_of_measurement_conversions', 'conversions_name')->ignore($id),
+            ],
+
             'base_unit_id' => [
                 'required',
                 'exists:unit_of_measurements,id',
-                'different:conversion_unit_id',
             ],
 
             'conversion_unit_id' => [
                 'required',
                 'exists:unit_of_measurements,id',
-                'different:base_unit_id',
-                Rule::unique('unit_of_measurement_conversions')
-                    ->where(function ($query) {
-                        return $query->where('base_unit_id', $this->base_unit_id);
-                    })->ignore($id),
             ],
 
             'conversion_rate' => [

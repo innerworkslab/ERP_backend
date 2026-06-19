@@ -24,6 +24,8 @@ class ListingRequest extends FormRequest
         return [
             'page' => 'integer',
             'per_page' => 'integer',
+            'search' => 'string',
+            'conversions_name' => 'string',
             'base_unit_id' => 'integer|exists:unit_of_measurements,id',
             'conversion_unit_id' => 'integer|exists:unit_of_measurements,id',
             'status' => 'string|in:active,inactive'
