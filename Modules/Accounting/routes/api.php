@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Accounting\app\Http\Controllers\AccountController;
 use Modules\Accounting\app\Http\Controllers\CashbookController;
+use Modules\Accounting\app\Http\Controllers\CashbookLedgerController;
 use Modules\Accounting\app\Http\Controllers\CashbookTransactionController;
 use Modules\Accounting\app\Http\Controllers\CashbookTransferController;
 use Modules\Accounting\app\Http\Controllers\CashbookAdjustmentController;
@@ -26,6 +27,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('', [CashbookTransactionController::class, 'create'])->middleware('permission:create_cashbook_transaction');
         Route::post('{id}', [CashbookTransactionController::class, 'update'])->middleware('permission:update_cashbook_transaction');
         Route::get('{id}', [CashbookTransactionController::class, 'findOrFail'])->middleware('permission:view_cashbook_transaction');
+    });
+
+    Route::prefix('v1/cashbook-ledgers')->group(function () {
+        Route::get('/{cashbookId}', [CashbookLedgerController::class, 'index'])->middleware('permission:view_cashbook_ledger');
     });
 
     Route::prefix('v1/cashbook-transfers')->group(function () {

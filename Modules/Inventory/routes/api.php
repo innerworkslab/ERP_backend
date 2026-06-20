@@ -32,10 +32,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/inventories')->group(function(){
         Route::patch('{id}/branch/{branchId}/toggle-status', [InventoryController::class, 'toggleActive'])->middleware('permission:update_inventory');
         Route::get('', [InventoryController::class, 'index'])->middleware('permission:view_inventory');
-        Route::post('', [InventoryController::class, 'create'])->middleware('permission:create_inventory'); 
-        Route::put('{id}', [InventoryController::class, 'update'])->middleware('permission:update_inventory'); 
+        Route::post('', [InventoryController::class, 'create'])->middleware('permission:create_inventory');
+        Route::put('{id}', [InventoryController::class, 'update'])->middleware('permission:update_inventory');
         Route::delete('{id}', [InventoryController::class, 'delete'])->middleware('permission:delete_inventory');
-        Route::get('{id}', [InventoryController::class, 'findOrFail'])->middleware('permission:view_inventory');  
+        Route::get('{id}', [InventoryController::class, 'findOrFail'])->middleware('permission:view_inventory');
     });
 
     Route::prefix('v1/opening-stocks')->group(function(){
@@ -76,7 +76,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('{id}', [PurchaseOrderController::class, 'destroy'])->middleware('permission:delete_purchase_order');
         Route::put('{id}/status', [PurchaseOrderController::class, 'updateStatus'])->middleware('permission:update_purchase_order');
         Route::put('{id}/payment-status', [PurchaseOrderController::class, 'updatePaymentStatus'])->middleware('permission:update_purchase_order');
-        // Route::put('{id}/delivery-status', [PurchaseOrderController::class, 'updateDeliveryStatus'])->middleware('permission:update_purchase_order');
+        Route::put('{id}/delivery-status', [PurchaseOrderController::class, 'updateDeliveryStatus'])->middleware('permission:update_purchase_order');
     });
 
     Route::prefix('v1/goods-receive-notes')->group(function () {

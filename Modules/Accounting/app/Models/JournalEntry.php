@@ -11,6 +11,8 @@ class JournalEntry extends Model
     use HasFactory;
 
     protected $fillable = [
+        'voucher_no',
+        'journal_date',
         'journal_datetime',
         'source_type',
         'source_id',

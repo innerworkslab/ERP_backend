@@ -38,7 +38,7 @@ class CreateRequest extends FormRequest
             'lines.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'lines.*.line_weight' => ['nullable', 'numeric', 'min:0'],
             'lines.*.discrepancy_reason' => ['nullable', 'in:none,cashback,defect'],
-            'lines.*.defect_responsibility' => ['nullable', 'in:supplier_side,company_side', 'required_if:lines.*.discrepancy_reason,defect'],
+            'lines.*.defect_responsibility' => ['nullable', 'in:none,supplier_side,company_side', 'required_if:lines.*.discrepancy_reason,defect'],
             'lines.*.remarks' => ['nullable', 'string'],
             'lines.*.manual_tax_amount' => ['nullable', 'numeric', 'min:0', 'required_if:tax_allocation_method,by_products'],
         ];

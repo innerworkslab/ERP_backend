@@ -269,6 +269,14 @@ class FeatureSeeder extends Seeder
                 'description' => 'This is a feature of cashbook adjustment',
                 'created_at' => now(),
                 'updated_at' => now(),
+            ],
+            [
+                'name' => 'Cashbook Ledger',
+                'key' => 'cashbook_ledger_feature',
+                'module' => 'Accounting',
+                'description' => 'This is a feature of cashbook ledger',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]
         ];
 
