@@ -2,7 +2,9 @@
 
 namespace Modules\Accounting\app\Http\Requests\CashbookTransaction;
 
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class ListingRequest extends FormRequest
 {
@@ -26,13 +28,19 @@ class ListingRequest extends FormRequest
             'per_page' => 'integer',
             'search'=> 'string',
             'status' => 'string|in:pending,confirmed,cancelled',
-            'transaction_type' => 'string|in:in,out'
+            'cashbook_id' => 'integer|exists:cashbooks,id',
+            'category' => 'string|in:expense,income',
         ];
     }
 
-    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    protected function failedValidation(Validator $validator)
     {
-        $errors = $validator->errors();
-        return $errors;
+        throw new HttpResponseException(response()->json([
+            'response' => [
+                'status' => 'error',
+                'message' => 'Validation error',
+            ],
+            'errors' => $validator->errors()->toArray(),
+        ], 422));
     }
 }

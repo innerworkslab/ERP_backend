@@ -26,7 +26,7 @@ class ListingRequest extends FormRequest
             'page' => 'integer',
             'per_page' => 'integer',
             'search' => 'string',
-            'cashbook_id' => 'required|integer|exists:cashbooks,id',
+            'cashbook_id' => 'nullable|integer|exists:cashbooks,id',
             'cashbook_transaction_id' => 'integer|exists:cashbook_transactions,id',
             'transaction_type' => [
                 'string',

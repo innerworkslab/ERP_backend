@@ -30,7 +30,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::prefix('v1/cashbook-ledgers')->group(function () {
-        Route::get('/{cashbookId}', [CashbookLedgerController::class, 'index'])->middleware('permission:view_cashbook_ledger');
+        Route::get('', [CashbookLedgerController::class, 'index'])->middleware('permission:view_cashbook_ledger');
     });
 
     Route::prefix('v1/cashbook-transfers')->group(function () {

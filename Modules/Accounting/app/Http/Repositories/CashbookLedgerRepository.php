@@ -3,8 +3,8 @@
 namespace Modules\Accounting\app\Http\Repositories;
 
 use Carbon\Carbon;
-use Modules\Accounting\app\Models\CashbookLedger;
 use Modules\Accounting\app\Models\Cashbook;
+use Modules\Accounting\app\Models\CashbookLedger;
 
 class CashbookLedgerRepository extends BaseRepo
 {
@@ -13,77 +13,13 @@ class CashbookLedgerRepository extends BaseRepo
         parent::__construct($model);
     }
 
-
-    public function getDataWithPagination($perPage = 10, $page = 1, $orderBy = 'created_at', $searches = null, $conditions = [], $orConditions = [], $with = [], $whereHas = null, $status = null)
-    {
-        $query = $this->model->query();
-
-        if (count($with) > 0) {
-            $query->with($with);
-        }
-
-        if ($whereHas && is_array($whereHas)) {
-            foreach ($whereHas as $relation => $constraint) {
-                $query->whereHas($relation, $constraint);
-            }
-        }
-
-        $offset = $perPage * ($page - 1);
-
-        if ($orderBy) {
-            $query->orderBy($orderBy, 'desc');
-        }
-
-        $query->limit($perPage);
-
-        if ($searches) {
-            $query->where(function ($q) use ($searches) {
-                foreach ($searches as $key => $value) {
-                    $q->orWhere($key, 'LIKE', "%$value%");
-                }
-            });
-        }
-
-        if (!empty($conditions['from_date'])) {
-            $query->whereDate('transaction_datetime', '>=', $conditions['from_date']);
-            unset($conditions['from_date']);
-        }
-
-        if (!empty($conditions['to_date'])) {
-            $query->whereDate('transaction_datetime', '<=', $conditions['to_date']);
-            unset($conditions['to_date']);
-        }
-
-        foreach ($conditions as $key => $condition) {
-            $query->where($key, $condition);
-        }
-
-        foreach ($orConditions as $key => $condition) {
-            $query->orWhere($key, $condition);
-        }
-
-        $totalCount = $query->count();
-
-        if ($offset > 0) {
-            $query->offset($offset);
-        }
-
-        $results = $query->latest()->get();
-
-        return [
-            'data' => $results,
-            'meta' => [
-                'total' => $totalCount,
-                'per_page' => $perPage,
-                'current_page' => $page,
-                'total_pages' => ceil($totalCount / $perPage),
-            ],
-        ];
-    }
-
     public function getDailyStatement(array $filters): array
     {
-        $cashbookId = (int) $filters['cashbook_id'];
+        $cashbookId = !empty($filters['cashbook_id'])
+            ? (int) $filters['cashbook_id']
+            : null;
+        $perPage = (int) ($filters['per_page'] ?? 20);
+        $page = (int) ($filters['page'] ?? 1);
         $selectedDate = Carbon::parse($filters['date'] ?? now()->toDateString());
         $fromDate = !empty($filters['from_date'])
             ? Carbon::parse($filters['from_date'])->startOfDay()
@@ -92,23 +28,25 @@ class CashbookLedgerRepository extends BaseRepo
             ? Carbon::parse($filters['to_date'])->endOfDay()
             : $selectedDate->copy()->endOfDay();
 
-        $cashbook = Cashbook::find($cashbookId);
-
-        $openingLedger = $this->model->query()
-            ->where('cashbook_id', $cashbookId)
-            ->where('transaction_datetime', '<', $fromDate)
-            ->orderByDesc('transaction_datetime')
-            ->orderByDesc('id')
-            ->first();
-
-        $openingBalance = $openingLedger
-            ? (float) $openingLedger->after_balance
-            : (float) ($cashbook?->current_balance ?? 0);
-
+        $openingBalance = null;
         $query = $this->model->query()
             ->with(['cashbook', 'transaction'])
-            ->where('cashbook_id', $cashbookId)
             ->whereBetween('transaction_datetime', [$fromDate, $toDate]);
+
+        if ($cashbookId !== null) {
+            $openingLedger = $this->model->query()
+                ->where('cashbook_id', $cashbookId)
+                ->where('transaction_datetime', '<', $fromDate)
+                ->orderByDesc('transaction_datetime')
+                ->orderByDesc('id')
+                ->first();
+
+            $openingBalance = $openingLedger
+                ? (float) $openingLedger->after_balance
+                : 0.0;
+
+            $query->where('cashbook_id', $cashbookId);
+        }
 
         if (!empty($filters['cashbook_transaction_id'])) {
             $query->where('cashbook_transaction_id', $filters['cashbook_transaction_id']);
@@ -131,37 +69,51 @@ class CashbookLedgerRepository extends BaseRepo
             ->orderBy('id')
             ->get();
 
-        $runningBalance = $openingBalance;
+        $runningBalances = [];
+        $openingBalances = [];
         $rows = [];
+
+        if ($cashbookId === null) {
+            $cashbookIds = Cashbook::query()->pluck('id');
+
+            foreach ($cashbookIds as $ledgerCashbookId) {
+                $openingBalances[$ledgerCashbookId] = $this->getOpeningBalanceForCashbook(
+                    (int) $ledgerCashbookId,
+                    $fromDate
+                );
+            }
+
+            $openingBalance = array_sum($openingBalances);
+            $runningBalances = $openingBalances;
+        }
 
         foreach ($ledgers as $ledger) {
             $amount = (float) $ledger->amount;
+            $ledgerCashbookId = (int) $ledger->cashbook_id;
+
+            if (!array_key_exists($ledgerCashbookId, $runningBalances)) {
+                $runningBalances[$ledgerCashbookId] = $openingBalances[$ledgerCashbookId]
+                    ?? $this->getOpeningBalanceForCashbook($ledgerCashbookId, $fromDate);
+            }
 
             if ($ledger->transaction_type === 'in') {
-                $runningBalance += $amount;
+                $runningBalances[$ledgerCashbookId] += $amount;
             } else {
-                $runningBalance -= $amount;
+                $runningBalances[$ledgerCashbookId] -= $amount;
             }
 
             $rows[] = [
-                'row_type' => 'transaction',
                 'id' => $ledger->id,
                 'cashbook_id' => $ledger->cashbook_id,
                 'cashbook_transaction_id' => $ledger->cashbook_transaction_id,
                 'cashbook' => $ledger->cashbook ? [
-                    'id' => $ledger->cashbook->id,
                     'name' => $ledger->cashbook->name,
-                    'branch_id' => $ledger->cashbook->branch_id,
-                    'currency_id' => $ledger->cashbook->currency_id,
-                    'current_balance' => $ledger->cashbook->current_balance,
-                    'status' => $ledger->cashbook->status,
                 ] : null,
                 'cashbook_transaction' => $ledger->transaction ? [
                     'id' => $ledger->transaction->id,
                     'cashbook_id' => $ledger->transaction->cashbook_id,
                     'reference_no' => $ledger->transaction->reference_no,
                     'transaction_type' => $ledger->transaction->transaction_type,
-                    'category' => $ledger->transaction->category,
                     'transaction_datetime' => $ledger->transaction->transaction_datetime?->toDateTimeString(),
                     'currency_id' => $ledger->transaction->currency_id,
                     'amount' => $ledger->transaction->amount,
@@ -174,9 +126,13 @@ class CashbookLedgerRepository extends BaseRepo
                 'remark' => $ledger->remark,
                 'transaction_type' => $ledger->transaction_type,
                 'amount' => $amount,
-                'balance' => $runningBalance,
+                'balance' => $runningBalances[$ledgerCashbookId],
             ];
         }
+
+        $totalCount = count($rows);
+        $offset = max(0, $perPage * ($page - 1));
+        $paginatedRows = array_slice($rows, $offset, $perPage);
 
         return [
             'date' => $selectedDate->toDateString(),
@@ -184,11 +140,31 @@ class CashbookLedgerRepository extends BaseRepo
             'to_date' => $toDate->toDateString(),
             'cashbook_id' => $cashbookId,
             'opening_balance' => $openingBalance,
-            'closing_balance' => $runningBalance,
-            'data' => $rows,
+            'closing_balance' => $cashbookId !== null
+                ? ($totalCount > 0 ? $rows[$totalCount - 1]['balance'] : $openingBalance)
+                : array_sum($runningBalances),
+            'data' => $paginatedRows,
             'meta' => [
-                'total_transactions' => $ledgers->count(),
+                'total_transactions' => $totalCount,
+                'total' => $totalCount,
+                'per_page' => $perPage,
+                'current_page' => $page,
+                'total_pages' => (int) ceil($totalCount / $perPage),
             ],
         ];
+    }
+
+    private function getOpeningBalanceForCashbook(int $cashbookId, Carbon $fromDate): float
+    {
+        $openingLedger = $this->model->query()
+            ->where('cashbook_id', $cashbookId)
+            ->where('transaction_datetime', '<', $fromDate)
+            ->orderByDesc('transaction_datetime')
+            ->orderByDesc('id')
+            ->first();
+
+        return $openingLedger
+            ? (float) $openingLedger->after_balance
+            : 0.0;
     }
 }

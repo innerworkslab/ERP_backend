@@ -76,17 +76,6 @@ class CashbookTransactionService
         }
     }
 
-    public function delete(int $id)
-    {
-        try {
-            $result = $this->cashbook_transaction_repository->delete($id);
-            return $result;
-        } catch (Exception $e) {
-            logger()->error('Error : Failed to delete cashbook transaction: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
     public function confirm($id)
     {
         $this->cashbook_transaction_repository->confirm($id);
