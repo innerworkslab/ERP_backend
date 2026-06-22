@@ -235,7 +235,7 @@ class PurchaseOrderController extends Controller
                 return $this->errorResponse('Cashbook not found.', 422);
             }
             if ($result['status'] == 'cashbook_currency_mismatch') {
-                return $this->errorResponse('Cashbook currency must be the same as purchase order currency.', 422);
+                return $this->errorResponse('Cashbook currency does not match the purchase order currency. Please select a cashbook with the same currency.', 422);
             }
 
             return $this->successResponse($result['data'] ?? [], 200, 'Purchase order payment status updated successfully');

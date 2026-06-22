@@ -59,6 +59,11 @@ class GoodsReceiveNoteService
         return $this->repo->find($id);
     }
 
+    public function calculate(array $attributes): array
+    {
+        return $this->normalize($attributes);
+    }
+
     public function create(array $attributes)
     {
         return DB::transaction(function () use ($attributes) {
@@ -147,17 +152,80 @@ class GoodsReceiveNoteService
         return ['status' => 'success', 'data' => $this->repo->find($id)];
     }
 
-    private function normalize(array $attributes, ?int $ignoreGrnId = null): array
+    public function purchaseOrderTemplate(int $purchaseOrderId): array
     {
-        $po = PurchaseOrder::with('lines')->find($attributes['purchase_order_id']);
+        $po = PurchaseOrder::with([
+            'supplier',
+            'branch',
+            'inventory',
+            'currency',
+            'lines.product',
+            'lines.uom',
+        ])->find($purchaseOrderId);
+
         if (!$po) {
             throw new \RuntimeException('Purchase order not found.');
         }
-        $this->assertHeaderMatchesPo($po, $attributes);
+
+        $receivedMap = DB::table('goods_receive_notes_lines as gl')
+            ->join('goods_receive_notes as g', 'g.id', '=', 'gl.goods_receive_note_id')
+            ->where('g.purchase_order_id', $po->id)
+            ->where('g.status', 'approved')
+            ->select('gl.purchase_order_line_id', DB::raw('SUM(gl.good_quantity) as received_quantity'))
+            ->groupBy('gl.purchase_order_line_id')
+            ->pluck('received_quantity', 'purchase_order_line_id');
+
+        return [
+            'purchase_order_id' => $po->id,
+            'po_no' => $po->po_number,
+            'po_date' => $po->po_date,
+            'supplier_id' => $po->supplier_id,
+            'supplier_name' => $po->supplier?->name,
+            'branch_id' => $po->branch_id,
+            'branch_name' => $po->branch?->name,
+            'inventory_id' => $po->inventory_id,
+            'inventory_name' => $po->inventory?->name,
+            'currency_id' => $po->currency_id,
+            'currency_code' => $po->currency?->code,
+            'currency_rate' => (float) ($po->currency?->exchange_rate ?? 1),
+            'delivery_status' => $po->delivery_status,
+            'lines' => $po->lines->map(function ($line) use ($receivedMap) {
+                $previouslyReceived = (float) ($receivedMap[$line->id] ?? 0);
+                $remaining = max((float) $line->quantity - $previouslyReceived, 0);
+
+                return [
+                    'purchase_order_line_id' => $line->id,
+                    'product_id' => $line->product_id,
+                    'product_name' => $line->product?->name,
+                    'sku' => $line->product?->sku,
+                    'uom_id' => $line->uom_id,
+                    'uom_name' => $line->uom?->name,
+                    'ordered_quantity' => (float) $line->quantity,
+                    'previously_received_quantity' => $previouslyReceived,
+                    'remaining_quantity' => $remaining,
+                    'unit_price' => (float) $line->unit_price,
+                ];
+            })->values(),
+        ];
+    }
+
+    private function normalize(array $attributes, ?int $ignoreGrnId = null): array
+    {
+        $po = PurchaseOrder::with([
+            'supplier',
+            'branch',
+            'inventory',
+            'currency',
+            'lines.product',
+            'lines.uom',
+        ])->find($attributes['purchase_order_id']);
+        if (!$po) {
+            throw new \RuntimeException('Purchase order not found.');
+        }
 
         $lines = $this->normalizeLinesFromPo($po, $attributes['lines'] ?? [], $ignoreGrnId);
         $charges = $attributes['charges'] ?? [];
-        $poCurrency = Currency::find($attributes['currency_id']);
+        $poCurrency = $po->currency;
         $poRate = (float) ($poCurrency->exchange_rate ?? 1);
 
         $chargeTotal = 0.0;
@@ -206,7 +274,10 @@ class GoodsReceiveNoteService
             $normalizedLines[] = [
                 'purchase_order_line_id' => $line['purchase_order_line_id'],
                 'product_id' => $line['product_id'],
+                'product_name' => $line['product_name'] ?? null,
+                'sku' => $line['sku'] ?? null,
                 'uom_id' => $line['uom_id'],
+                'uom_name' => $line['uom_name'] ?? null,
                 'ordered_quantity' => $line['ordered_quantity'],
                 'previously_received_quantity' => $line['previously_received_quantity'],
                 'remaining_quantity' => max((float) $line['ordered_quantity'] - (float) $line['previously_received_quantity'] - $received, 0),
@@ -232,6 +303,16 @@ class GoodsReceiveNoteService
         $total = round($subtotal + $chargeTotal + $taxAmount - $discount, 2);
 
         return array_merge($attributes, [
+            'purchase_order_id' => $po->id,
+            'supplier_id' => $po->supplier_id,
+            'branch_id' => $po->branch_id,
+            'inventory_id' => $po->inventory_id,
+            'currency_id' => $po->currency_id,
+            'purchase_order_no' => $po->po_number,
+            'supplier_name' => $po->supplier?->name,
+            'branch_name' => $po->branch?->name,
+            'inventory_name' => $po->inventory?->name,
+            'currency_code' => $poCurrency?->code,
             'lines' => $normalizedLines,
             'charges' => $normalizedCharges,
             'subtotal_amount' => round($subtotal, 2),
@@ -242,25 +323,28 @@ class GoodsReceiveNoteService
         ]);
     }
 
-    private function assertHeaderMatchesPo(PurchaseOrder $po, array $attributes): void
-    {
-        foreach (['supplier_id', 'branch_id', 'inventory_id', 'currency_id'] as $key) {
-            if ((int) $po->{$key} !== (int) $attributes[$key]) {
-                throw new \RuntimeException('GRN header must match purchase order.');
-            }
-        }
-    }
-
     private function normalizeLinesFromPo(PurchaseOrder $po, array $inputLines, ?int $ignoreGrnId = null): array
     {
         $poLines = PurchaseOrderLine::where('purchase_order_id', $po->id)->get()->keyBy('id');
         $normalized = [];
+        $inputLines = collect($inputLines);
+        $inputLineMap = $inputLines->mapWithKeys(function ($line) {
+            return [(int) $line['purchase_order_line_id'] => $line];
+        });
 
-        foreach ($inputLines as $line) {
-            $poLineId = (int) $line['purchase_order_line_id'];
-            $poLine = $poLines->get($poLineId);
-            if (!$poLine) {
-                throw new \RuntimeException('GRN line does not belong to purchase order.');
+        if ($inputLineMap->count() !== $inputLines->count()) {
+            throw new \RuntimeException('Duplicate purchase order line detected in GRN payload.');
+        }
+
+        $unexpectedLineIds = $inputLineMap->keys()->diff($poLines->keys());
+        if ($unexpectedLineIds->isNotEmpty()) {
+            throw new \RuntimeException('GRN line does not belong to purchase order.');
+        }
+
+        foreach ($poLines as $poLineId => $poLine) {
+            $line = $inputLineMap->get((int) $poLineId);
+            if (!$line) {
+                throw new \RuntimeException('GRN line is missing for purchase order line ' . $poLineId . '.');
             }
 
             $prevReceived = (float) DB::table('goods_receive_notes_lines as gl')
@@ -291,10 +375,14 @@ class GoodsReceiveNoteService
 
             $normalized[] = array_merge($line, [
                 'product_id' => (int) $poLine->product_id,
+                'product_name' => $poLine->product?->name,
+                'sku' => $poLine->product?->sku,
                 'uom_id' => (int) $poLine->uom_id,
+                'uom_name' => $poLine->uom?->name,
                 'ordered_quantity' => $ordered,
                 'unit_price' => (float) $poLine->unit_price,
                 'previously_received_quantity' => $prevReceived,
+                'remaining_quantity' => $remaining,
             ]);
         }
 
@@ -307,12 +395,11 @@ class GoodsReceiveNoteService
             return;
         }
 
+        $taxAmount = round((float) ($attributes['cargo_tax_amount'] ?? 0), 2);
         $lineTaxTotal = 0.0;
         foreach ($lines as $line) {
             $lineTaxTotal += (float) ($line['allocated_tax_amount'] ?? 0);
         }
-
-        $taxAmount = round((float) ($attributes['cargo_tax_amount'] ?? 0), 2);
         if (round($lineTaxTotal, 2) !== $taxAmount) {
             throw new \RuntimeException('Tax by products must equal total cargo tax amount.');
         }
@@ -321,13 +408,18 @@ class GoodsReceiveNoteService
     private function allocateAmounts(array $lines, float $chargeTotal, float $taxAmount, string $feeMethod, string $taxMethod): array
     {
         $chargeWeights = $this->weights($lines, $feeMethod);
-        $taxWeights = $this->weights($lines, $taxMethod === 'by_products' ? 'equal_line' : 'by_weight');
+        $taxWeights = $taxMethod === 'by_products'
+            ? []
+            : $this->weights($lines, 'by_weight');
 
         $result = [];
         foreach ($lines as $index => $line) {
+            $resolvedTax = $taxMethod === 'by_products'
+                ? (float) ($line['manual_tax_amount'] ?? 0)
+                : round($taxAmount * ($taxWeights[$index] ?? 0), 2);
             $result[$index] = [
                 'charge' => round($chargeTotal * ($chargeWeights[$index] ?? 0), 2),
-                'tax' => round($taxAmount * ($taxWeights[$index] ?? 0), 2),
+                'tax' => $resolvedTax,
             ];
         }
 
@@ -453,17 +545,11 @@ class GoodsReceiveNoteService
 
     private function postCashbookPayment($grn, int $journalEntryId, int $supplierApAccountId, array $payload): void
     {
-        $paidAmount = (float) ($payload['paid_amount'] ?? 0);
         $cashbookId = $payload['cashbook_id'] ?? null;
-        if ($paidAmount <= 0) {
+        if (!$cashbookId) {
             return;
         }
-        if (!$cashbookId) {
-            throw new Exception('Cashbook is required when paid amount is provided.');
-        }
-        if ($paidAmount > (float) $grn->total_amount) {
-            throw new Exception('Paid amount cannot exceed GRN total amount.');
-        }
+        $paidAmount = round((float) $grn->total_amount, 2);
 
         $cashbook = Cashbook::lockForUpdate()->find($cashbookId);
         if (!$cashbook) {
@@ -483,7 +569,7 @@ class GoodsReceiveNoteService
             'source_account_id' => $cashbook->account_id,
             'destination_account_id' => $supplierApAccountId,
             'transaction_type' => 'out',
-            'category' => 'others',
+            'category' => 'expense',
             'transaction_datetime' => now(),
             'currency_id' => $grn->currency_id,
             'amount' => $paidAmount,

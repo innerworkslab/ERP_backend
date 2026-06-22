@@ -74,6 +74,36 @@ class GoodsReceiveNotesController extends Controller
         }
     }
 
+    public function calculate(CreateRequest $request)
+    {
+        try {
+            $result = $this->service->calculate($request->validated());
+            return $this->successResponse($result, 200, 'Goods receive note calculation completed successfully');
+        } catch (\RuntimeException $e) {
+            return $this->errorResponse($e->getMessage(), 422);
+        } catch (\Exception $e) {
+            logger()->error($e);
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
+
+    public function purchaseOrderTemplate($purchaseOrderId)
+    {
+        if (!is_numeric($purchaseOrderId)) {
+            return $this->errorResponse('ID must be an integer!', 422);
+        }
+
+        try {
+            $result = $this->service->purchaseOrderTemplate((int) $purchaseOrderId);
+            return $this->successResponse($result, 200, 'Purchase order template for GRN');
+        } catch (\RuntimeException $e) {
+            return $this->errorResponse($e->getMessage(), 422);
+        } catch (\Exception $e) {
+            logger()->error($e);
+            return $this->errorResponse('Something went wrong!', 500);
+        }
+    }
+
     public function show($id)
     {
         if (!is_numeric($id)) {
@@ -129,8 +159,7 @@ class GoodsReceiveNotesController extends Controller
             return $this->errorResponse('ID must be an integer!', 422);
         }
         $validator = Validator::make($request->all(), [
-            'paid_amount' => ['nullable', 'numeric', 'min:0'],
-            'cashbook_id' => ['required_with:paid_amount', 'integer', 'exists:cashbooks,id'],
+            'cashbook_id' => ['nullable', 'integer', 'exists:cashbooks,id'],
         ]);
         if ($validator->fails()) {
             return $this->validationErrorResponse($validator);
