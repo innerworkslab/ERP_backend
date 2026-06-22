@@ -267,6 +267,11 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Approve Cashbook Adjustment', 'key' => 'approve_cashbook_adjustment'],
                 ['name' => 'Delete Cashbook Adjustment', 'key' => 'delete_cashbook_adjustment'],
             ],
+
+            // Cashbook Ledger
+            'cashbook_ledger_feature' => [
+                ['name' => 'View Cashbook Ledger', 'key' => 'view_cashbook_ledger'],
+            ],
         ];
 
         foreach ($permissions as $key => $perms) {

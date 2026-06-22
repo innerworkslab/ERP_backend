@@ -38,9 +38,7 @@ return new class extends Migration {
                 'income',
                 'transfer',
                 'adjustment',
-                'deposit',
-                'withdraw',
-                'others',
+                'other',
             ]);
 
             $table->dateTime('transaction_datetime');

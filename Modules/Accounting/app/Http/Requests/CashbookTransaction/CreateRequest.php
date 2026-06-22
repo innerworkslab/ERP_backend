@@ -2,8 +2,9 @@
 
 namespace Modules\Accounting\app\Http\Requests\CashbookTransaction;
 
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class CreateRequest extends FormRequest
 {
@@ -36,39 +37,16 @@ class CreateRequest extends FormRequest
                 'exists:accounts,id',
             ],
 
-            'destination_account_id' => [
-                'required',
-                'integer',
-                'exists:accounts,id',
-                'different:source_account_id',
-            ],
-
             'currency_id' => [
                 'required',
                 'integer',
                 'exists:currencies,id',
             ],
 
-            'transaction_type' => [
-                'required',
-                Rule::in([
-                    'in',
-                    'out',
-                ]),
-            ],
-
             'category' => [
                 'required',
-                Rule::in([
-                    'expense',
-                    'income',
-                    'transfer',
-                    'adjustment',
-                    'deposit',
-                    'withdraw',
-                    'others',
-                ]),
-            ],
+                'in:expense,income',
+            ],  
 
             'amount' => [
                 'required',
@@ -130,9 +108,14 @@ class CreateRequest extends FormRequest
         ];
     }
 
-    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    protected function failedValidation(Validator $validator)
     {
-        $errors = $validator->errors();
-        return $errors;
+        throw new HttpResponseException(response()->json([
+            'response' => [
+                'status' => 'error',
+                'message' => 'Validation error',
+            ],
+            'errors' => $validator->errors()->toArray(),
+        ], 422));
     }
 }

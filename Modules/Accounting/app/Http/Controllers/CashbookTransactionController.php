@@ -4,8 +4,6 @@ namespace Modules\Accounting\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Traits\ApiResponser;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Modules\Accounting\app\Http\Requests\CashbookTransaction\CreateRequest;
 use Modules\Accounting\app\Http\Requests\CashbookTransaction\ListingRequest;
 use Modules\Accounting\app\Http\Requests\CashbookTransaction\UpdateRequest;
@@ -26,10 +24,6 @@ class CashbookTransactionController extends Controller
     public function index(ListingRequest $request)
     {
         try {
-            $validator = Validator::make($request->all(), $request->rules(), $request->messages());
-            if ($validator->fails()) {
-                return $this->validationErrorResponse($validator);
-            }
             $validated = $request->validated();
             $per_page = array_key_exists('per_page', $validated) ? $validated['per_page'] : 20;
             $page = array_key_exists('page', $validated) ? $validated['page'] : 1;
@@ -52,8 +46,11 @@ class CashbookTransactionController extends Controller
             if (!empty($validated['status'])) {
                 $conditions['status'] = $validated['status'];
             }
-            if (!empty($validated['transaction_type'])) {
-                $conditions['transaction_type'] = $validated['transaction_type'];
+            if (!empty($validated['cashbook_id'])) {
+                $conditions['cashbook_id'] = (int) $validated['cashbook_id'];
+            }
+            if (!empty($validated['category'])) {
+                $conditions['category'] = $validated['category'];
             }
 
             $with = ['cashbook', 'currency', 'source_account', 'destination_account', 'created_by', 'updated_by', 'attachments'];
@@ -86,10 +83,6 @@ class CashbookTransactionController extends Controller
     public function create(CreateRequest $request)
     {
         try {
-            $validator = Validator::make($request->all(), $request->rules(), $request->messages());
-            if ($validator->fails()) {
-                return $this->validationErrorResponse($validator);
-            }
             $validated = $request->validated();
             $result = $this->cashbook_transaction_service->create($validated);
             return $this->successResponse($result, 200, 'Cashbook Transaction is created successfully');
@@ -102,18 +95,11 @@ class CashbookTransactionController extends Controller
     public function update(UpdateRequest $request, $id)
     {
         try {
-            $validator = Validator::make($request->all(), $request->rules(), $request->messages());
-            if ($validator->fails()) {
-                return $this->validationErrorResponse($validator);
-            }
             $validated = $request->validated();
             $data = $this->cashbook_transaction_service->whereFirst('id', $id);
             if ($data) {
-                if ($data->status == "confirmed") {
-                    return $this->errorResponse("already confirmed. Cannot edit.", 409);
-                }
-                if ($data->status == "cancelled") {
-                    return $this->errorResponse("already cancelled. Cannot edit.", 409);
+                if ($errorResponse = $this->ensureTransactionIsMutable($data)) {
+                    return $errorResponse;
                 }
                 $result = $this->cashbook_transaction_service->update($id, $validated);
                 return $this->successResponse($result, 200, 'Cashbook Transaction is updated successfully');
@@ -126,36 +112,13 @@ class CashbookTransactionController extends Controller
         }
     }
 
-    public function delete($id)
-    {
-        try {
-            if (!is_numeric($id)) {
-                return $this->errorResponse('ID must be an integer!', 422);
-            }
-            $data = $this->cashbook_transaction_service->whereFirst('id', $id);
-            if ($data) {
-                if ($this->cashbook_transaction_service->delete($id)) {
-                    return $this->successResponse([], 200, 'Cashbook Transaction deleted successfully!');
-                }
-            } else {
-                return $this->errorResponse('Cashbook Transaction not found!', 500);
-            }
-        } catch (\Exception $e) {
-            logger()->error($e);
-            return $this->errorResponse('Something went wrong!', 500);
-        }
-    }
-
     public function confirm($id)
     {
         try {
             $data = $this->cashbook_transaction_service->whereFirst('id', $id);
             if ($data) {
-                if ($data->status == "confirmed") {
-                    return $this->errorResponse("already confirmed. Cannot edit.", 409);
-                }
-                if ($data->status == "cancelled") {
-                    return $this->errorResponse("already cancelled. Cannot edit.", 409);
+                if ($errorResponse = $this->ensureTransactionIsMutable($data)) {
+                    return $errorResponse;
                 }
                 $result = $this->cashbook_transaction_service->confirm($id);
                 return $this->successResponse($result, 200, 'Cashbook Transaction is confirmed successfully');
@@ -166,5 +129,18 @@ class CashbookTransactionController extends Controller
             logger()->error($e);
             return $this->errorResponse('Something went wrong!', 500);
         }
+    }
+
+    private function ensureTransactionIsMutable($transaction)
+    {
+        if ($transaction->status === 'confirmed') {
+            return $this->errorResponse('already confirmed. Cannot edit.', 409);
+        }
+
+        if ($transaction->status === 'cancelled') {
+            return $this->errorResponse('already cancelled. Cannot edit.', 409);
+        }
+
+        return null;
     }
 }

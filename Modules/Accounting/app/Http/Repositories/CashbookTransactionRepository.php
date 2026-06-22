@@ -6,7 +6,7 @@ use DB;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Modules\Accounting\app\Http\Repositories\BaseRepo;
-use Modules\Accounting\app\Models\Account;
+use Modules\Accounting\app\Models\Cashbook;
 use Modules\Accounting\app\Models\CashbookLedger;
 use Modules\Accounting\app\Models\CashbookTransaction;
 use Modules\Accounting\app\Models\JournalEntry;
@@ -16,23 +16,9 @@ use Modules\Organization\app\Models\Currency;
 
 class CashbookTransactionRepository extends BaseRepo
 {
-    protected $account_repository;
-
-    public function __construct(CashbookTransaction $model, AccountRepository $account_repository)
+    public function __construct(CashbookTransaction $model)
     {
         parent::__construct($model);
-        $this->account_repository = $account_repository;
-    }
-
-    public function toggleActive(CashbookTransaction $cashbook)
-    {
-        $cashbook->updated_by = auth()->user()->id;
-        if ($cashbook->status == 'active') {
-            $cashbook->status = 'inactive';
-        } else {
-            $cashbook->status = 'active';
-        }
-        $cashbook->save();
     }
 
     public function find($id)
@@ -46,6 +32,7 @@ class CashbookTransactionRepository extends BaseRepo
 
     public function create($data)
     {
+        $data = $this->prepareTransactionPayload($data);
         $reference_no = $this->generateCashbookTransactionReferenceCode();
         $data['reference_no'] = $reference_no;
         $selected_currency = Currency::find($data['currency_id']);
@@ -62,7 +49,7 @@ class CashbookTransactionRepository extends BaseRepo
 
     public function update($id, $data)
     {
-
+        $data = $this->prepareTransactionPayload($data);
         $transaction = $this->model->find($id);
         if (isset($data['currency_id'], $data['amount'])) {
 
@@ -228,6 +215,32 @@ class CashbookTransactionRepository extends BaseRepo
         $this->addJournalData($transaction);
     }
 
+    private function prepareTransactionPayload(array $data): array
+    {
+        $cashbook = Cashbook::query()->find($data['cashbook_id']);
+        if (!$cashbook) {
+            throw new \RuntimeException('Cashbook not found.');
+        }
+
+        $data['destination_account_id'] = (int) $cashbook->account_id;
+        $data['transaction_type'] = $this->resolveTransactionTypeFromCategory(
+            (string) $data['category']
+        );
+
+        return $data;
+    }
+
+    private function resolveTransactionTypeFromCategory(string $category): string
+    {
+        $category = strtolower(trim($category));
+
+        return match ($category) {
+            'income' => 'in',
+            'expense' => 'out',
+            default => throw new \RuntimeException('Unsupported cashbook category.'),
+        };
+    }
+
     public function addJournalData($transaction)
     {
         $entry = JournalEntry::create([
@@ -238,11 +251,12 @@ class CashbookTransactionRepository extends BaseRepo
         ]);
 
         $base_currency_amount = (float) $transaction->base_currency_amount;
+        $isInflow = $transaction->transaction_type === 'in';
 
         JournalPosting::create([
             'journal_entry_id' => $entry->id,
             'account_id' => $transaction->source_account_id,
-            'type' => $transaction->transaction_type == 'in' ? 'debit' : 'credit',
+            'type' => $isInflow ? 'credit' : 'debit',
             'currency_id' => $transaction->currency_id,
             'amount' => $transaction->amount,
             'base_currency_amount' => $base_currency_amount,
@@ -251,7 +265,7 @@ class CashbookTransactionRepository extends BaseRepo
         JournalPosting::create([
             'journal_entry_id' => $entry->id,
             'account_id' => $transaction->destination_account_id,
-            'type' => $transaction->transaction_type == 'in' ? 'credit' : 'debit',
+            'type' => $isInflow ? 'debit' : 'credit',
             'currency_id' => $transaction->currency_id,
             'amount' => $transaction->amount,
             'base_currency_amount' => $base_currency_amount,

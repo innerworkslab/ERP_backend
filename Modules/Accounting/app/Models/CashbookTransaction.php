@@ -89,20 +89,4 @@ class CashbookTransaction extends Model
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
-
-
-    public function isIn(): bool
-    {
-        return $this->transaction_type === 'in';
-    }
-
-    public function isOut(): bool
-    {
-        return $this->transaction_type === 'out';
-    }
-
-    public function isConfirmed(): bool
-    {
-        return $this->status === 'confirmed';
-    }
 }
