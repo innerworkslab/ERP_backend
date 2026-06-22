@@ -82,6 +82,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('v1/goods-receive-notes')->group(function () {
         Route::get('', [GoodsReceiveNotesController::class, 'index'])->middleware('permission:view_goods_receive_note');
         Route::post('', [GoodsReceiveNotesController::class, 'store'])->middleware('permission:create_goods_receive_note');
+        Route::post('calculate', [GoodsReceiveNotesController::class, 'calculate'])->middleware('permission:create_goods_receive_note');
+        Route::get('purchase-orders/{purchaseOrderId}', [GoodsReceiveNotesController::class, 'purchaseOrderTemplate'])->middleware('permission:view_goods_receive_note');
         Route::get('{id}', [GoodsReceiveNotesController::class, 'show'])->middleware('permission:view_goods_receive_note');
         Route::get('{id}/returnable-lines', [PurchaseReturnController::class, 'returnableLines'])->middleware('permission:view_goods_receive_note');
         Route::put('{id}', [GoodsReceiveNotesController::class, 'update'])->middleware('permission:update_goods_receive_note');

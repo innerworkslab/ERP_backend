@@ -263,7 +263,7 @@ class PurchaseOrderService
                         'source_account_id' => $cashbook->account_id,
                         'destination_account_id' => $supplierApAccount->id,
                         'transaction_type' => 'out',
-                        'category' => 'others',
+                        'category' => 'expense',
                         'transaction_datetime' => now(),
                         'currency_id' => $currencyId,
                         'amount' => $paidAmount,
