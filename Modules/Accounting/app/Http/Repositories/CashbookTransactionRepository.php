@@ -186,6 +186,17 @@ class CashbookTransactionRepository extends BaseRepo
     public function confirm($id)
     {
         $transaction = $this->model->find($id);
+        if (!$transaction) {
+            throw new \RuntimeException('Cashbook Transaction not found');
+        }
+
+        if ($transaction->status === 'confirmed') {
+            throw new \RuntimeException('Cashbook Transaction already confirmed');
+        }
+
+        if ($transaction->status === 'cancelled') {
+            throw new \RuntimeException('Cancelled cashbook transaction cannot be confirmed');
+        }
 
         //cashbook ledger entry creation and cashbook balance update
         $last_ledger_record = CashbookLedger::where('cashbook_id', $transaction->cashbook_id)->latest()->first();
@@ -213,6 +224,11 @@ class CashbookTransactionRepository extends BaseRepo
         $transaction->cashbook->save();
 
         $this->addJournalData($transaction);
+
+        $transaction->status = 'confirmed';
+        $transaction->save();
+
+        return $transaction;
     }
 
     private function prepareTransactionPayload(array $data): array

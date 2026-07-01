@@ -5,6 +5,7 @@ namespace Modules\Inventory\app\Http\Services;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Modules\Accounting\app\Http\Repositories\AccountRepository;
+use Modules\Accounting\app\Http\Services\JournalService;
 use Modules\Accounting\app\Models\Account;
 use Modules\Accounting\app\Models\Cashbook;
 use Modules\Accounting\app\Models\CashbookLedger;
@@ -22,7 +23,8 @@ class GoodsReceiveNoteService
         protected GoodsReceiveNoteRepository $repo,
         protected UOMConversionService $uomConversionService,
         protected StockLedgerService $stockLedgerService,
-        protected AccountRepository $accountRepository
+        protected AccountRepository $accountRepository,
+        protected JournalService $journalService
     ) {
     }
 
@@ -483,40 +485,41 @@ class GoodsReceiveNoteService
         $inventory = Account::where('code', '2-1024')->first();
         $apParent = Account::where('code', '4-2100')->first();
         $defectExpense = Account::where('code', '6-3000')->first();
-        $supplierReceivable = Account::where('code', '2-1055')->first();
+        $supplierClaim = Account::where('code', '2-1055')->first();
         if (!$inventory || !$apParent) {
             throw new Exception('Required accounts are missing.');
         }
-        $supplierAp = $this->resolveSupplierApAccount($apParent->id, (string) $grn->supplier->name);
 
-        $entry = JournalEntry::create([
+        $liabilityAccount = $this->resolveSupplierApAccount($apParent->id, (string) $grn->supplier->name);
+
+        if (!$liabilityAccount) {
+            throw new Exception('Required liability account is missing.');
+        }
+
+        $entry = $this->journalService->createEntry([
             'journal_datetime' => now(),
             'source_type' => 'goods_receive_note',
             'source_id' => $grn->id,
             'description' => 'GRN posting for ' . $grn->grn_no,
+        ], [
+            [
+                'account_id' => $inventory->id,
+                'type' => 'debit',
+                'currency_id' => (int) $grn->currency_id,
+                'amount' => (float) $grn->total_amount,
+                'base_currency_amount' => round((float) $grn->total_amount * (float) ($grn->currency->exchange_rate ?? 1), 8),
+            ],
+            [
+                'account_id' => $liabilityAccount->id,
+                'type' => 'credit',
+                'currency_id' => (int) $grn->currency_id,
+                'amount' => (float) $grn->total_amount,
+                'base_currency_amount' => round((float) $grn->total_amount * (float) ($grn->currency->exchange_rate ?? 1), 8),
+            ],
         ]);
 
         $currencyId = (int) $grn->currency_id;
         $rate = (float) ($grn->currency->exchange_rate ?? 1);
-        $total = (float) $grn->total_amount;
-
-        JournalPosting::create([
-            'journal_entry_id' => $entry->id,
-            'account_id' => $inventory->id,
-            'type' => 'debit',
-            'currency_id' => $currencyId,
-            'amount' => $total,
-            'base_currency_amount' => round($total * $rate, 8),
-        ]);
-
-        JournalPosting::create([
-            'journal_entry_id' => $entry->id,
-            'account_id' => $supplierAp->id,
-            'type' => 'credit',
-            'currency_id' => $currencyId,
-            'amount' => $total,
-            'base_currency_amount' => round($total * $rate, 8),
-        ]);
 
         foreach ($grn->lines as $line) {
             if ((float) $line->short_quantity <= 0) {
@@ -529,18 +532,18 @@ class GoodsReceiveNoteService
             if ($line->discrepancy_reason === 'defect' && $line->defect_responsibility === 'company_side' && $defectExpense) {
                 // Company side defect: recognize extra expense and payable.
                 $this->postJournal($entry->id, $defectExpense->id, 'debit', $currencyId, $lossAmount, $rate);
-                $this->postJournal($entry->id, $supplierAp->id, 'credit', $currencyId, $lossAmount, $rate);
+                $this->postJournal($entry->id, $liabilityAccount->id, 'credit', $currencyId, $lossAmount, $rate);
             }
             if (($line->discrepancy_reason === 'cashback'
                 || ($line->discrepancy_reason === 'defect' && $line->defect_responsibility === 'supplier_side'))
-                && $supplierReceivable) {
-                // Supplier side/cashback: reduce AP and book supplier claim receivable.
-                $this->postJournal($entry->id, $supplierReceivable->id, 'debit', $currencyId, $lossAmount, $rate);
-                $this->postJournal($entry->id, $supplierAp->id, 'credit', $currencyId, $lossAmount, $rate);
+                && $supplierClaim) {
+                // Supplier side/cashback: book supplier claim receivable.
+                $this->postJournal($entry->id, $supplierClaim->id, 'debit', $currencyId, $lossAmount, $rate);
+                $this->postJournal($entry->id, $liabilityAccount->id, 'credit', $currencyId, $lossAmount, $rate);
             }
         }
 
-        $this->postCashbookPayment($grn, $entry->id, $supplierAp->id, $payload);
+        $this->postCashbookPayment($grn, $entry->id, $liabilityAccount->id, $payload);
     }
 
     private function postCashbookPayment($grn, int $journalEntryId, int $supplierApAccountId, array $payload): void

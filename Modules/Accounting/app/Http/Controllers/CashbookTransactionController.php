@@ -117,6 +117,14 @@ class CashbookTransactionController extends Controller
         try {
             $data = $this->cashbook_transaction_service->whereFirst('id', $id);
             if ($data) {
+                if ($data->status === 'confirmed') {
+                    return $this->errorResponse('already confirmed. Cannot confirm again.', 409);
+                }
+
+                if ($data->status === 'cancelled') {
+                    return $this->errorResponse('already cancelled. Cannot confirm.', 409);
+                }
+
                 if ($errorResponse = $this->ensureTransactionIsMutable($data)) {
                     return $errorResponse;
                 }

@@ -18,16 +18,11 @@ class GoodsReturnLine extends Model
         'product_id',
         'uom_id',
         'tax_id',
-        'grn_good_quantity',
-        'already_returned_quantity',
-        'returnable_quantity',
         'return_quantity',
         'unit_price',
-        'final_unit_cost',
         'tax_amount',
         'line_total',
         'reason',
-        'remarks',
     ];
 
     public function purchaseReturn()

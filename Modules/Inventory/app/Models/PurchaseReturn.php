@@ -21,9 +21,9 @@ class PurchaseReturn extends Model
         'branch_id',
         'inventory_id',
         'currency_id',
-        'exchange_goods_receive_note_id',
         'return_date',
         'return_type',
+        'exchange_type',
         'subtotal_amount',
         'tax_amount',
         'total_amount',
@@ -62,11 +62,6 @@ class PurchaseReturn extends Model
     public function currency()
     {
         return $this->belongsTo(Currency::class);
-    }
-
-    public function exchangeGoodsReceiveNote()
-    {
-        return $this->belongsTo(GoodsReceiveNotes::class, 'exchange_goods_receive_note_id');
     }
 
     public function lines()

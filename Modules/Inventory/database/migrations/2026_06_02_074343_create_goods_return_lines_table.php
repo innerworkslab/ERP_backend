@@ -16,16 +16,11 @@ return new class extends Migration
             $table->unsignedBigInteger('product_id');
             $table->unsignedBigInteger('uom_id');
             $table->unsignedBigInteger('tax_id')->nullable();
-            $table->decimal('grn_good_quantity', 15, 2)->default(0);
-            $table->decimal('already_returned_quantity', 15, 2)->default(0);
-            $table->decimal('returnable_quantity', 15, 2)->default(0);
             $table->decimal('return_quantity', 15, 2);
             $table->decimal('unit_price', 15, 2)->default(0);
-            $table->decimal('final_unit_cost', 15, 4)->default(0);
             $table->decimal('tax_amount', 15, 2)->default(0);
             $table->decimal('line_total', 15, 2)->default(0);
             $table->string('reason')->nullable();
-            $table->string('remarks')->nullable();
             $table->timestamps();
 
             $table->foreign('purchase_return_id')->references('id')->on('purchase_returns')->onDelete('cascade');

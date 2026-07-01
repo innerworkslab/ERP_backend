@@ -22,16 +22,8 @@ class PurchaseReturnController extends Controller
         $validated = $request->validated();
         $perPage = $validated['per_page'] ?? 20;
         $page = $validated['page'] ?? 1;
-        $searches = [];
+        $search = $validated['search'] ?? null;
         $conditions = [];
-
-        if (!empty($validated['search'])) {
-            $searches = ['return_no' => $validated['search'], 'remarks' => $validated['search']];
-        }
-
-        if (!empty($validated['return_no'])) {
-            $searches['return_no'] = $validated['return_no'];
-        }
 
         foreach (['goods_receive_note_id', 'purchase_order_id', 'supplier_id', 'branch_id', 'inventory_id', 'return_type', 'status'] as $key) {
             if (!empty($validated[$key])) {
@@ -47,7 +39,7 @@ class PurchaseReturnController extends Controller
             $conditions['return_date_to'] = $validated['return_date_to'];
         }
 
-        $result = $this->service->list($perPage, $page, $searches, $conditions);
+        $result = $this->service->list($perPage, $page, $search, $validated['return_no'] ?? null, $conditions);
         $result['data'] = $result['data']->map(function ($purchaseReturn) {
             return [
                 'id' => $purchaseReturn->id,
@@ -60,6 +52,7 @@ class PurchaseReturnController extends Controller
                 'inventory' => $purchaseReturn->inventory?->name,
                 'currency' => $purchaseReturn->currency?->code,
                 'return_type' => $purchaseReturn->return_type,
+                'exchange_type' => $purchaseReturn->exchange_type,
                 'total_amount' => $purchaseReturn->total_amount,
                 'status' => $purchaseReturn->status,
             ];
