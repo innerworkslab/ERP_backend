@@ -17,9 +17,9 @@ return new class extends Migration
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('inventory_id');
             $table->unsignedBigInteger('currency_id');
-            $table->unsignedBigInteger('exchange_goods_receive_note_id')->nullable();
             $table->date('return_date');
             $table->enum('return_type', ['exchange', 'fully_returned']);
+            $table->enum('exchange_type', ['full', 'partial'])->nullable();
             $table->decimal('subtotal_amount', 15, 2)->default(0);
             $table->decimal('tax_amount', 15, 2)->default(0);
             $table->decimal('total_amount', 15, 2)->default(0);
@@ -36,7 +36,6 @@ return new class extends Migration
             $table->foreign('branch_id')->references('id')->on('branches')->onDelete('cascade');
             $table->foreign('inventory_id')->references('id')->on('inventories')->onDelete('cascade');
             $table->foreign('currency_id')->references('id')->on('currencies')->onDelete('cascade');
-            $table->foreign('exchange_goods_receive_note_id')->references('id')->on('goods_receive_notes')->nullOnDelete();
             $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
         });

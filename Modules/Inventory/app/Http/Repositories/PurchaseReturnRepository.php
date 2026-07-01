@@ -25,7 +25,6 @@ class PurchaseReturnRepository extends BaseRepo
                 'branch',
                 'inventory',
                 'currency',
-                'exchangeGoodsReceiveNote',
                 'lines.product',
                 'lines.uom',
                 'lines.tax',
@@ -71,6 +70,109 @@ class PurchaseReturnRepository extends BaseRepo
         return $this->model->orderByDesc('id')->first();
     }
 
+    public function getListWithFilters(
+        int $perPage,
+        int $page,
+        ?string $search = null,
+        ?string $returnNo = null,
+        array $conditions = [],
+        ?string $returnDateFrom = null,
+        ?string $returnDateTo = null
+    ): array {
+        $query = $this->buildListQuery($search, $returnNo, $conditions, $returnDateFrom, $returnDateTo);
+        $total = (clone $query)->count();
+        $results = $query
+            ->orderByDesc('created_at')
+            ->offset(max($page - 1, 0) * $perPage)
+            ->limit($perPage)
+            ->get();
+
+        return [
+            'data' => $results,
+            'meta' => [
+                'total' => $total,
+                'per_page' => $perPage,
+                'current_page' => $page,
+                'total_pages' => (int) ceil($total / max($perPage, 1)),
+            ],
+        ];
+    }
+
+    private function buildListQuery(
+        ?string $search,
+        ?string $returnNo,
+        array $conditions,
+        ?string $returnDateFrom,
+        ?string $returnDateTo
+    ) {
+        $query = $this->model->newQuery()->with([
+            'goodsReceiveNote',
+            'purchaseOrder',
+            'supplier',
+            'branch',
+            'inventory',
+            'currency',
+        ]);
+
+        $this->applySearchFilter($query, $search);
+        $this->applyReturnNoFilter($query, $returnNo);
+        $this->applyExactFilters($query, $conditions);
+        $this->applyDateFilters($query, $returnDateFrom, $returnDateTo);
+
+        return $query;
+    }
+
+    private function applySearchFilter($query, ?string $search): void
+    {
+        if (empty($search)) {
+            return;
+        }
+
+        $query->where(function ($searchQuery) use ($search) {
+            $searchQuery->where('return_no', 'like', '%' . $search . '%')
+                ->orWhere('remarks', 'like', '%' . $search . '%')
+                ->orWhereHas('goodsReceiveNote', function ($q) use ($search) {
+                    $q->where('grn_no', 'like', '%' . $search . '%');
+                })
+                ->orWhereHas('supplier', function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                })
+                ->orWhereHas('branch', function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                })
+                ->orWhereHas('inventory', function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                });
+        });
+    }
+
+    private function applyReturnNoFilter($query, ?string $returnNo): void
+    {
+        if (empty($returnNo)) {
+            return;
+        }
+
+        $query->where('return_no', 'like', '%' . $returnNo . '%');
+    }
+
+    private function applyExactFilters($query, array $conditions): void
+    {
+        foreach ($conditions as $key => $value) {
+            $query->where($key, $value);
+        }
+    }
+
+    private function applyDateFilters($query, ?string $returnDateFrom, ?string $returnDateTo): void
+    {
+        if (!empty($returnDateFrom)) {
+            $query->whereDate('return_date', '>=', $returnDateFrom);
+        }
+
+        if (!empty($returnDateTo)) {
+            $query->whereDate('return_date', '<=', $returnDateTo);
+        }
+    }
+
     private function formatHeader(array $attributes): array
     {
         return [
@@ -81,9 +183,9 @@ class PurchaseReturnRepository extends BaseRepo
             'branch_id' => $attributes['branch_id'],
             'inventory_id' => $attributes['inventory_id'],
             'currency_id' => $attributes['currency_id'],
-            'exchange_goods_receive_note_id' => $attributes['exchange_goods_receive_note_id'] ?? null,
             'return_date' => $attributes['return_date'],
             'return_type' => $attributes['return_type'],
+            'exchange_type' => $attributes['exchange_type'] ?? null,
             'subtotal_amount' => $attributes['subtotal_amount'] ?? 0,
             'tax_amount' => $attributes['tax_amount'] ?? 0,
             'total_amount' => $attributes['total_amount'] ?? 0,
