@@ -5,7 +5,6 @@ namespace Modules\Inventory\app\Http\Services;
 use Illuminate\Support\Facades\DB;
 use Modules\Accounting\app\Http\Services\JournalService;
 use Modules\Accounting\app\Models\Account;
-use Modules\Inventory\app\Http\Repositories\GoodsReceiveNoteRepository;
 use Modules\Inventory\app\Http\Repositories\PurchaseReturnRepository;
 use Modules\Inventory\app\Models\GoodsReceiveNotes;
 use Modules\Inventory\app\Models\PurchaseReturn;
@@ -18,7 +17,6 @@ class PurchaseReturnService
         protected PurchaseReturnRepository $repo,
         protected UOMConversionService $uomConversionService,
         protected StockLedgerService $stockLedgerService,
-        protected GoodsReceiveNoteRepository $goodsReceiveNoteRepository,
         protected JournalService $journalService
     ) {
     }
@@ -167,10 +165,6 @@ class PurchaseReturnService
             $purchaseReturn = $this->repo->find($id);
             $this->postStock($purchaseReturn);
             $this->postSupplierClaimJournal($purchaseReturn);
-
-            if ($purchaseReturn->return_type === 'exchange') {
-                $exchangeGrn = $this->createExchangeGrnDraft($purchaseReturn);
-            }
 
             return ['status' => 'success', 'data' => $this->repo->find($id)];
         });
@@ -396,71 +390,11 @@ class PurchaseReturnService
         return (float) ($currency?->exchange_rate ?: 1);
     }
 
-    private function createExchangeGrnDraft(PurchaseReturn $purchaseReturn)
-    {
-        $purchaseReturn->loadMissing(['purchaseOrder', 'goodsReceiveNote', 'lines.goodsReceiveNoteLine']);
-
-        return $this->goodsReceiveNoteRepository->createWithRelations([
-            'grn_no' => $this->nextExchangeGrnNumber(),
-            'purchase_order_id' => $purchaseReturn->purchase_order_id,
-            'supplier_id' => $purchaseReturn->supplier_id,
-            'branch_id' => $purchaseReturn->branch_id,
-            'inventory_id' => $purchaseReturn->inventory_id,
-            'currency_id' => $purchaseReturn->currency_id,
-            'grn_date' => $purchaseReturn->return_date,
-            'fee_allocation_method' => $purchaseReturn->goodsReceiveNote?->fee_allocation_method ?? 'by_line_value',
-            'tax_allocation_method' => $purchaseReturn->goodsReceiveNote?->tax_allocation_method ?? 'by_weight',
-            'remarks' => 'Purchase Return - Exchange',
-            'subtotal_amount' => $purchaseReturn->subtotal_amount,
-            'discount_amount' => 0,
-            'cargo_tax_amount' => $purchaseReturn->tax_amount,
-            'charge_total_amount' => 0,
-            'total_amount' => $purchaseReturn->total_amount,
-            'status' => 'pending',
-            'created_by' => auth()->id(),
-            'lines' => collect($purchaseReturn->lines)->map(function ($line) {
-                $lineTotal = (float) $line->line_total;
-                $qty = max((float) $line->return_quantity, 0);
-                $unitCost = $qty > 0 ? round($lineTotal / $qty, 4) : (float) $line->unit_price;
-
-                return [
-                    'purchase_order_line_id' => $line->purchase_order_line_id,
-                    'product_id' => $line->product_id,
-                    'uom_id' => $line->uom_id,
-                    'ordered_quantity' => (float) ($line->goodsReceiveNoteLine?->ordered_quantity ?? $line->return_quantity),
-                    'previously_received_quantity' => 0,
-                    'remaining_quantity' => 0,
-                    'received_quantity' => $qty,
-                    'good_quantity' => $qty,
-                    'short_quantity' => 0,
-                    'discrepancy_reason' => 'none',
-                    'defect_responsibility' => null,
-                    'unit_price' => (float) $line->unit_price,
-                    'line_weight' => 0,
-                    'allocated_charge_amount' => 0,
-                    'allocated_tax_amount' => (float) $line->tax_amount,
-                    'final_unit_cost' => $unitCost,
-                    'line_total' => $lineTotal,
-                    'remarks' => 'Purchase Return - Exchange',
-                ];
-            })->all(),
-            'charges' => [],
-        ]);
-    }
-
     private function nextNumber(): string
     {
         $last = $this->repo->getLastRecord();
         $lastId = $last ? (int) substr($last->return_no, strrpos($last->return_no, '-') + 1) : 0;
 
         return 'INW-PR-' . date('y-n-j') . '-' . str_pad((string) ($lastId + 1), 4, '0', STR_PAD_LEFT);
-    }
-
-    private function nextExchangeGrnNumber(): string
-    {
-        $last = $this->goodsReceiveNoteRepository->getLastRecord();
-        $lastId = $last ? (int) substr($last->grn_no, strrpos($last->grn_no, '-') + 1) : 0;
-
-        return 'INW-GRN-' . date('y-n-j') . '-' . str_pad((string) ($lastId + 1), 4, '0', STR_PAD_LEFT);
     }
 }
