@@ -8,5 +8,6 @@
     "Product": true,
     "Inventory": true,
     "Location": true,
-    "Accounting": true
+    "Accounting": true,
+    "Sale": true
 }
