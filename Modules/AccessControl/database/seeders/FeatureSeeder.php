@@ -231,6 +231,14 @@ class FeatureSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'name' => 'Delivery Provider',
+                'key' => 'delivery_provider_feature',
+                'module' => 'Sale',
+                'description' => 'This is a feature of delivery provider',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'name' => 'Account',
                 'key' => 'account_feature',
                 'module' => 'Accounting',

@@ -223,6 +223,13 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Approve Purchase Return', 'key' => 'approve_purchase_return'],
                 ['name' => 'Reject Purchase Return', 'key' => 'reject_purchase_return'],
             ],
+
+            //Delivery Provider
+            'delivery_provider_feature' => [
+                ['name' => 'View Delivery Provider', 'key' => 'view_delivery_provider'],
+                ['name' => 'Create Delivery Provider', 'key' => 'create_delivery_provider'],
+                ['name' => 'Update Delivery Provider', 'key' => 'update_delivery_provider'],
+            ],
             
             // Location
             'location_feature' => [
