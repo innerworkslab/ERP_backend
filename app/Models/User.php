@@ -122,7 +122,23 @@ class User extends Authenticatable
             ->where('key', $permissionKey)
             ->exists();
 
-        return $userPermission;
+        return $userPermission;    
+
+        // if ($userPermission) {
+        //     return true;
+        // }
+
+        // if ($this->role) {
+        //     return $this->role
+        //         ->features()
+        //         ->whereHas('permissions', function ($query) use ($permissionKey) {
+        //             $query->where('key', $permissionKey)
+        //                 ->where('status', 'active');
+        //         })
+        //         ->exists();
+        // }
+
+        // return false;
     }
 
     public function staffPersonalInformation()

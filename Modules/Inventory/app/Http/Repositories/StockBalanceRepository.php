@@ -35,6 +35,27 @@ class StockBalanceRepository
             ->whereDate('sm.transaction_date', '<=', $dateTo)
             ->groupBy('sm.product_id', 'sm.inventory_id', DB::raw("COALESCE(sm.lot_no, '')"));
 
+        $productOnHandSub = DB::query()
+            ->fromSub($lotBalanceSub, 'lb2')
+            ->selectRaw('lb2.product_id, lb2.inventory_id, SUM(lb2.closing_qty) as product_on_hand_quantity')
+            ->groupBy('lb2.product_id', 'lb2.inventory_id');
+
+        $reservedQuantitySub = DB::table('sale_invoice_items as sii')
+            ->join('sale_invoices as si', 'si.id', '=', 'sii.sale_invoice_id')
+            ->join('products as p2', 'p2.id', '=', 'sii.product_id')
+            ->leftJoin('unit_of_measurement_conversions as uomc', function ($join) {
+                $join->on('uomc.base_unit_id', '=', 'p2.stock_uom_id')
+                    ->on('uomc.conversion_unit_id', '=', 'sii.uom_id')
+                    ->where('uomc.status', '=', 'active');
+            })
+            ->where('si.status', 'reserved')
+            ->selectRaw('sii.product_id, si.inventory_id, SUM(CASE
+                WHEN sii.uom_id = p2.stock_uom_id THEN sii.quantity
+                WHEN uomc.conversion_rate IS NOT NULL THEN sii.quantity / uomc.conversion_rate
+                ELSE sii.quantity
+            END) as reserved_quantity')
+            ->groupBy('sii.product_id', 'si.inventory_id');
+
         $inventoryBranchSub = DB::table('branch_inventory as bi')
             ->join('branches as br', 'br.id', '=', 'bi.branch_id')
             ->where('bi.status', 'active')
@@ -52,6 +73,14 @@ class StockBalanceRepository
             ->leftJoin('categories as cat', 'cat.id', '=', 'p.category_id')
             ->leftJoin('brands as b', 'b.id', '=', 'p.brand_id')
             ->leftJoin('inventories as i', 'i.id', '=', 'lb.inventory_id')
+            ->leftJoinSub($productOnHandSub, 'ph', function ($join) {
+                $join->on('ph.product_id', '=', 'lb.product_id')
+                    ->on('ph.inventory_id', '=', 'lb.inventory_id');
+            })
+            ->leftJoinSub($reservedQuantitySub, 'rs', function ($join) {
+                $join->on('rs.product_id', '=', 'lb.product_id')
+                    ->on('rs.inventory_id', '=', 'lb.inventory_id');
+            })
             ->leftJoinSub($inventoryBranchSub, 'ib', function ($join) {
                 $join->on('ib.inventory_id', '=', 'lb.inventory_id');
             })
@@ -82,8 +111,16 @@ class StockBalanceRepository
                 lb.period_cost as movement_stock_value,
                 lb.closing_cost as closing_stock_value,
                 lb.closing_qty as on_hand_quantity,
-                0 as reserved_quantity,
-                lb.closing_qty as available_quantity,
+                CASE
+                    WHEN COALESCE(ph.product_on_hand_quantity, 0) > 0
+                    THEN ROUND(COALESCE(rs.reserved_quantity, 0) * (lb.closing_qty / ph.product_on_hand_quantity), 2)
+                    ELSE 0
+                END as reserved_quantity,
+                CASE
+                    WHEN COALESCE(ph.product_on_hand_quantity, 0) > 0
+                    THEN ROUND(lb.closing_qty - (COALESCE(rs.reserved_quantity, 0) * (lb.closing_qty / ph.product_on_hand_quantity)), 2)
+                    ELSE lb.closing_qty
+                END as available_quantity,
                 p.alert_quantity as reorder_level,
                 CASE WHEN lb.closing_qty = 0 THEN 0 ELSE ROUND(lb.closing_cost / lb.closing_qty, 4) END as unit_cost,
                 lb.closing_cost as total_stock_value,
@@ -204,6 +241,106 @@ class StockBalanceRepository
                 'date_to' => $dateTo,
             ],
         ];
+    }
+
+    public function getProductSummary(int $inventoryId, int $productId): array
+    {
+        $onHandQuantity = (float) DB::table('stock_movements as sm')
+            ->where('sm.inventory_id', $inventoryId)
+            ->where('sm.product_id', $productId)
+            ->sum('sm.quantity');
+
+        $reservedQuantity = (float) DB::table('sale_invoice_items as sii')
+            ->join('sale_invoices as si', 'si.id', '=', 'sii.sale_invoice_id')
+            ->where('si.inventory_id', $inventoryId)
+            ->where('si.status', 'reserved')
+            ->where('sii.product_id', $productId)
+            ->sum('sii.quantity');
+
+        return [
+            'on_hand_quantity' => round($onHandQuantity, 2),
+            'reserved_quantity' => round($reservedQuantity, 2),
+            'available_quantity' => round($onHandQuantity - $reservedQuantity, 2),
+        ];
+    }
+
+    public function getLotBalancesForProduct(int $inventoryId, int $productId): array
+    {
+        $lotBalanceSub = DB::table('stock_movements as sm')
+            ->selectRaw(
+                "sm.product_id,
+                sm.inventory_id,
+                COALESCE(sm.lot_no, '') as lot_no,
+                SUM(sm.quantity) as closing_qty,
+                MAX(sm.transaction_date) as last_movement_date"
+            )
+            ->where('sm.inventory_id', $inventoryId)
+            ->where('sm.product_id', $productId)
+            ->groupBy('sm.product_id', 'sm.inventory_id', DB::raw("COALESCE(sm.lot_no, '')"));
+
+        $productOnHandSub = DB::query()
+            ->fromSub($lotBalanceSub, 'lb2')
+            ->selectRaw('lb2.product_id, lb2.inventory_id, SUM(lb2.closing_qty) as product_on_hand_quantity')
+            ->groupBy('lb2.product_id', 'lb2.inventory_id');
+
+        $reservedQuantitySub = DB::table('sale_invoice_items as sii')
+            ->join('sale_invoices as si', 'si.id', '=', 'sii.sale_invoice_id')
+            ->join('products as p2', 'p2.id', '=', 'sii.product_id')
+            ->leftJoin('unit_of_measurement_conversions as uomc', function ($join) {
+                $join->on('uomc.base_unit_id', '=', 'p2.stock_uom_id')
+                    ->on('uomc.conversion_unit_id', '=', 'sii.uom_id')
+                    ->where('uomc.status', '=', 'active');
+            })
+            ->where('si.inventory_id', $inventoryId)
+            ->where('si.status', 'reserved')
+            ->where('sii.product_id', $productId)
+            ->selectRaw('sii.product_id, si.inventory_id, SUM(CASE
+                WHEN sii.uom_id = p2.stock_uom_id THEN sii.quantity
+                WHEN uomc.conversion_rate IS NOT NULL THEN sii.quantity / uomc.conversion_rate
+                ELSE sii.quantity
+            END) as reserved_quantity')
+            ->groupBy('sii.product_id', 'si.inventory_id');
+
+        return DB::query()
+            ->fromSub($lotBalanceSub, 'lb')
+            ->leftJoin('product_lots as pl', function ($join) {
+                $join->on('pl.product_id', '=', 'lb.product_id')
+                    ->on(DB::raw("COALESCE(pl.lot_no, '')"), '=', 'lb.lot_no');
+            })
+            ->leftJoinSub($productOnHandSub, 'ph', function ($join) {
+                $join->on('ph.product_id', '=', 'lb.product_id')
+                    ->on('ph.inventory_id', '=', 'lb.inventory_id');
+            })
+            ->leftJoinSub($reservedQuantitySub, 'rs', function ($join) {
+                $join->on('rs.product_id', '=', 'lb.product_id')
+                    ->on('rs.inventory_id', '=', 'lb.inventory_id');
+            })
+            ->selectRaw(
+                "pl.id as product_lot_id,
+                lb.product_id,
+                lb.inventory_id,
+                lb.lot_no,
+                pl.expired_date,
+                pl.serial_no,
+                lb.closing_qty as on_hand_quantity,
+                CASE
+                    WHEN COALESCE(ph.product_on_hand_quantity, 0) > 0
+                    THEN ROUND(COALESCE(rs.reserved_quantity, 0) * (lb.closing_qty / ph.product_on_hand_quantity), 2)
+                    ELSE 0
+                END as reserved_quantity,
+                CASE
+                    WHEN COALESCE(ph.product_on_hand_quantity, 0) > 0
+                    THEN ROUND(lb.closing_qty - (COALESCE(rs.reserved_quantity, 0) * (lb.closing_qty / ph.product_on_hand_quantity)), 2)
+                    ELSE lb.closing_qty
+                END as available_quantity,
+                lb.last_movement_date,
+                pl.created_at"
+            )
+            ->where('lb.closing_qty', '<>', 0)
+            ->orderBy('pl.created_at')
+            ->get()
+            ->map(fn ($row) => (array) $row)
+            ->all();
     }
 
     public function getProductLotTotals(int $productId, ?int $inventoryId = null, int $nearExpiryDays = 30)
