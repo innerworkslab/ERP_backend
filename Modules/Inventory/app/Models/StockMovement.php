@@ -5,6 +5,7 @@ namespace Modules\Inventory\app\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Inventory\app\Models\UnitOfMeasurement;
+use Modules\Sale\app\Models\SaleInvoice;
 // use Modules\Inventory\Database\Factories\StockMovementFactory;
 
 class StockMovement extends Model
@@ -74,6 +75,7 @@ class StockMovement extends Model
         return match ($this->reference_type) {
             self::REFERENCE_OPENING_STOCK => OpeningStock::query()->where('voucher_no', $this->voucher_no)->first(),
             self::REFERENCE_TRANSFER_IN, self::REFERENCE_TRANSFER_OUT => $this->reference_id ? StockTransfer::query()->find($this->reference_id) : StockTransfer::query()->where('reference_id', $this->voucher_no)->first(),
+            'sale_issue' => $this->reference_id ? SaleInvoice::query()->find($this->reference_id) : SaleInvoice::query()->where('invoice_number', $this->voucher_no)->first(),
             default => null,
         };
     }

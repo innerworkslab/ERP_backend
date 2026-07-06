@@ -230,6 +230,17 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Create Delivery Provider', 'key' => 'create_delivery_provider'],
                 ['name' => 'Update Delivery Provider', 'key' => 'update_delivery_provider'],
             ],
+
+            'sale_invoice_feature' => [
+                ['name' => 'View Sale Invoice', 'key' => 'view_sale_invoice'],
+                ['name' => 'Create Sale Invoice', 'key' => 'create_sale_invoice'],
+                ['name' => 'Update Sale Invoice', 'key' => 'update_sale_invoice'],
+                ['name' => 'Delete Sale Invoice', 'key' => 'delete_sale_invoice'],
+                ['name' => 'Pending Sale Invoice', 'key' => 'pending_sale_invoice'],
+                ['name' => 'Ordered Sale Invoice', 'key' => 'ordered_sale_invoice'],
+                ['name' => 'Reserved Sale Invoice', 'key' => 'reserved_sale_invoice'],
+                ['name' => 'Delivered Sale Invoice', 'key' => 'delivered_sale_invoice']
+            ],
             
             // Location
             'location_feature' => [

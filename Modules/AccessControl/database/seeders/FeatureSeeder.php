@@ -239,6 +239,14 @@ class FeatureSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'name' => 'Sale Invoice',
+                'key' => 'sale_invoice_feature',
+                'module' => 'Sale',
+                'description' => 'This is a feature of sale invoice',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'name' => 'Account',
                 'key' => 'account_feature',
                 'module' => 'Accounting',
