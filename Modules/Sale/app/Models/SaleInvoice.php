@@ -102,4 +102,9 @@ class SaleInvoice extends Model
     {
         return $this->hasOne(SaleInvoiceDelivery::class);
     }
+
+    public function deliver_notes(): HasMany
+    {
+        return $this->hasMany(DeliverNote::class);
+    }
 }

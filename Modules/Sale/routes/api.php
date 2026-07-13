@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Sale\app\Http\Controllers\DeliveryProviderController;
+use Modules\Sale\app\Http\Controllers\DeliverNoteController;
 use Modules\Sale\app\Http\Controllers\SaleInvoiceController;
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
@@ -19,11 +20,22 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
         Route::patch('{id}/pending', [SaleInvoiceController::class, 'pending'])->middleware('permission:pending_sale_invoice');
         Route::patch('{id}/ordered', [SaleInvoiceController::class, 'ordered'])->middleware('permission:ordered_sale_invoice');
         Route::patch('{id}/reserved', [SaleInvoiceController::class, 'reserved'])->middleware('permission:reserved_sale_invoice');
-        Route::patch('{id}/delivered', [SaleInvoiceController::class, 'delivered'])->middleware('permission:delivered_sale_invoice');
         Route::get('', [SaleInvoiceController::class, 'index'])->middleware('permission:view_sale_invoice');
         Route::post('', [SaleInvoiceController::class, 'create'])->middleware('permission:create_sale_invoice');
         Route::put('{id}', [SaleInvoiceController::class, 'update'])->middleware('permission:update_sale_invoice');
         Route::delete('{id}', [SaleInvoiceController::class, 'delete'])->middleware('permission:delete_sale_invoice');
         Route::get('{id}', [SaleInvoiceController::class, 'findOrFail'])->middleware('permission:view_sale_invoice');
+    });
+
+    // Deliver Note
+    Route::prefix('deliver-notes')->group(function () {
+        Route::patch('{id}/pending', [DeliverNoteController::class, 'pending'])->middleware('permission:pending_deliver_note');
+        Route::patch('{id}/confirmed', [DeliverNoteController::class, 'confirmed'])->middleware('permission:confirm_deliver_note');
+        Route::patch('{id}/rejected', [DeliverNoteController::class, 'rejected'])->middleware('permission:reject_deliver_note');
+        Route::patch('{id}/cancelled', [DeliverNoteController::class, 'cancelled'])->middleware('permission:cancel_deliver_note');
+        Route::get('', [DeliverNoteController::class, 'index'])->middleware('permission:view_deliver_note');
+        Route::post('', [DeliverNoteController::class, 'create'])->middleware('permission:create_deliver_note');
+        Route::put('{id}', [DeliverNoteController::class, 'update'])->middleware('permission:update_deliver_note');
+        Route::get('{id}', [DeliverNoteController::class, 'findOrFail'])->middleware('permission:view_deliver_note');
     });
 });

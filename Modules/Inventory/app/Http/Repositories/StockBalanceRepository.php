@@ -50,9 +50,9 @@ class StockBalanceRepository
             })
             ->where('si.status', 'reserved')
             ->selectRaw('sii.product_id, si.inventory_id, SUM(CASE
-                WHEN sii.uom_id = p2.stock_uom_id THEN sii.quantity
-                WHEN uomc.conversion_rate IS NOT NULL THEN sii.quantity / uomc.conversion_rate
-                ELSE sii.quantity
+                WHEN sii.uom_id = p2.stock_uom_id THEN COALESCE(sii.reserved_qty, 0)
+                WHEN uomc.conversion_rate IS NOT NULL THEN COALESCE(sii.reserved_qty, 0) / uomc.conversion_rate
+                ELSE COALESCE(sii.reserved_qty, 0)
             END) as reserved_quantity')
             ->groupBy('sii.product_id', 'si.inventory_id');
 
@@ -255,7 +255,7 @@ class StockBalanceRepository
             ->where('si.inventory_id', $inventoryId)
             ->where('si.status', 'reserved')
             ->where('sii.product_id', $productId)
-            ->sum('sii.quantity');
+            ->sum(DB::raw('COALESCE(sii.reserved_qty, 0)'));
 
         return [
             'on_hand_quantity' => round($onHandQuantity, 2),
@@ -295,9 +295,9 @@ class StockBalanceRepository
             ->where('si.status', 'reserved')
             ->where('sii.product_id', $productId)
             ->selectRaw('sii.product_id, si.inventory_id, SUM(CASE
-                WHEN sii.uom_id = p2.stock_uom_id THEN sii.quantity
-                WHEN uomc.conversion_rate IS NOT NULL THEN sii.quantity / uomc.conversion_rate
-                ELSE sii.quantity
+                WHEN sii.uom_id = p2.stock_uom_id THEN COALESCE(sii.reserved_qty, 0)
+                WHEN uomc.conversion_rate IS NOT NULL THEN COALESCE(sii.reserved_qty, 0) / uomc.conversion_rate
+                ELSE COALESCE(sii.reserved_qty, 0)
             END) as reserved_quantity')
             ->groupBy('sii.product_id', 'si.inventory_id');
 

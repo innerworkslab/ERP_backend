@@ -13,6 +13,7 @@ use Modules\Organization\app\Models\Currency;
 use Modules\Product\app\Models\Product;
 use Modules\Product\app\Models\Tax;
 use Modules\Sale\app\Http\Repositories\SaleInvoiceRepository;
+use Modules\Sale\app\Models\DeliverNote;
 use Modules\Sale\app\Models\SaleInvoice;
 
 class SaleInvoiceService
@@ -173,9 +174,7 @@ class SaleInvoiceService
                     $this->assertReservationAvailability($existing);
                 }
 
-                if ($status === 'delivered') {
-                    $this->createSaleIssueMovements($existing, $context);
-                }
+                $this->syncInvoiceItemReservationMetrics($existing, $status);
 
                 $updated = $this->sale_invoice_repository->update($id, ['status' => $status]);
 
@@ -185,6 +184,65 @@ class SaleInvoiceService
             logger()->error('Error : Failed to update sale invoice status: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    public function syncDeliveredStatusIfComplete(int $id)
+    {
+        try {
+            return DB::transaction(function () use ($id) {
+                $invoice = $this->sale_invoice_repository->find($id);
+                if (!$invoice) {
+                    return ['status' => 'not_found'];
+                }
+
+                $invoice->loadMissing('items');
+                $allDelivered = $invoice->items->isNotEmpty()
+                    && $invoice->items->every(function ($item) {
+                        return round((float) ($item->remaining_delivery_qty ?? 0), 2) <= 0;
+                    });
+
+                if (!$allDelivered) {
+                    return ['status' => 'not_complete'];
+                }
+
+                $updated = $this->sale_invoice_repository->update($id, ['status' => 'delivered']);
+
+                return ['status' => 'success', 'data' => $updated];
+            });
+        } catch (Exception $e) {
+            logger()->error('Error : Failed to sync sale invoice delivered status: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function issueDeliverNote(DeliverNote $deliverNote): void
+    {
+        $deliverNote->loadMissing('items');
+        $invoice = SaleInvoice::with(['items.product'])->find($deliverNote->sale_invoice_id);
+
+        if (!$invoice) {
+            throw new \RuntimeException('Sale invoice not found.');
+        }
+
+        $usesInvoiceInventory = (int) $invoice->inventory_id === (int) $deliverNote->source_inventory_id;
+
+        // A delivery note may override the invoice's default source inventory.
+        $invoice->inventory_id = $deliverNote->source_inventory_id;
+        if (!$usesInvoiceInventory && $invoice->status === 'reserved') {
+            $invoice->status = 'ordered';
+        }
+
+        $allocations = $deliverNote->items->map(fn ($item) => [
+            'product_id' => (int) $item->product_id,
+            'uom_id' => (int) $item->uom_id,
+            'quantity' => (float) $item->quantity,
+        ])->all();
+
+        $this->createSaleIssueMovements($invoice, [
+            'allocations' => $allocations,
+            'transaction_date' => $deliverNote->delivery_date?->format('Y-m-d') ?? now()->toDateString(),
+            'voucher_no' => $deliverNote->deliver_note_no,
+        ]);
     }
 
     private function normalizePayload(array $attributes, ?SaleInvoice $existing = null): array
@@ -197,6 +255,10 @@ class SaleInvoiceService
                 'unit_price' => $item->unit_price,
                 'discount_type' => $item->discount_type ?? 'fixed',
                 'discount_amount' => $item->discount,
+                'order_qty' => $item->order_qty ?? $item->quantity,
+                'reserved_qty' => $item->reserved_qty ?? 0,
+                'previously_deliver_qty' => $item->previously_deliver_qty ?? 0,
+                'remaining_delivery_qty' => max((float) ($item->order_qty ?? $item->quantity) - (float) ($item->previously_deliver_qty ?? 0), 0),
                 'remarks' => $item->remarks,
             ];
         })->toArray() : []);
@@ -378,6 +440,10 @@ class SaleInvoiceService
                 'product_id' => (int) $product->id,
                 'uom_id' => (int) $uomId,
                 'quantity' => $quantity,
+                'order_qty' => round($quantity, 2),
+                'reserved_qty' => 0,
+                'previously_deliver_qty' => 0,
+                'remaining_delivery_qty' => round($quantity, 2),
                 'unit_price' => round($unitPrice, 2),
                 'discount_type' => $discountType,
                 'discount' => $discount,
@@ -437,8 +503,8 @@ class SaleInvoiceService
         $allowed = [
             'draft' => ['pending'],
             'pending' => ['draft', 'ordered'],
-            'ordered' => ['reserved', 'delivered'],
-            'reserved' => ['ordered', 'delivered'],
+            'ordered' => ['reserved'],
+            'reserved' => ['ordered'],
             'delivered' => [],
         ];
 
@@ -587,7 +653,8 @@ class SaleInvoiceService
                     invoice: $invoice,
                     requirement: $requirements[$productId],
                     quantity: $stockQuantity,
-                    lotNo: $lotNo
+                    lotNo: $lotNo,
+                    context: $context
                 );
 
                 $remainingByProduct[$productId] -= $stockQuantity;
@@ -620,7 +687,8 @@ class SaleInvoiceService
                     invoice: $invoice,
                     requirement: $requirement,
                     quantity: $pickedQuantity,
-                    lotNo: $lotBalance['lot_no'] !== '' ? (string) $lotBalance['lot_no'] : null
+                    lotNo: $lotBalance['lot_no'] !== '' ? (string) $lotBalance['lot_no'] : null,
+                    context: $context
                 );
 
                 $remaining -= $pickedQuantity;
@@ -646,7 +714,8 @@ class SaleInvoiceService
 
             $stockUomId = (int) ($product->stock_uom_id ?? $item->uom_id);
             $sourceUomId = (int) ($item->uom_id ?? $stockUomId);
-            $quantity = $this->convertQuantityToStockUom((float) $item->quantity, $sourceUomId, $stockUomId);
+            $orderQty = (float) ($item->order_qty ?? $item->quantity ?? 0);
+            $quantity = $this->convertQuantityToStockUom($orderQty, $sourceUomId, $stockUomId);
 
             if (!array_key_exists((int) $product->id, $requirements)) {
                 $requirements[(int) $product->id] = [
@@ -654,12 +723,22 @@ class SaleInvoiceService
                     'product_name' => (string) $product->name,
                     'sku' => (string) $product->sku,
                     'quantity' => 0.0,
+                    'order_qty' => 0.0,
+                    'reserved_qty' => 0.0,
+                    'previously_deliver_qty' => 0.0,
+                    'remaining_delivery_qty' => 0.0,
                     'uom_id' => (int) $item->uom_id,
                     'stock_uom_id' => $stockUomId,
                 ];
             }
 
             $requirements[(int) $product->id]['quantity'] += $quantity;
+            $requirements[(int) $product->id]['order_qty'] += $orderQty;
+            $requirements[(int) $product->id]['reserved_qty'] += (float) ($item->reserved_qty ?? 0);
+            $requirements[(int) $product->id]['previously_deliver_qty'] += (float) ($item->previously_deliver_qty ?? 0);
+            $requirements[(int) $product->id]['remaining_delivery_qty'] += (float) (
+                $item->remaining_delivery_qty ?? max($orderQty - (float) ($item->previously_deliver_qty ?? 0), 0)
+            );
         }
 
         return $requirements;
@@ -690,20 +769,7 @@ class SaleInvoiceService
             return $lotNo;
         }
 
-        if (empty($allocation['product_lot_id'])) {
-            return null;
-        }
-
-        $lot = ProductLots::query()
-            ->where('id', (int) $allocation['product_lot_id'])
-            ->where('product_id', $productId)
-            ->first();
-
-        if (!$lot) {
-            throw new \RuntimeException('Selected product lot not found.');
-        }
-
-        return $lot->lot_no;
+        return null;
     }
 
     private function getLotAvailableQuantity(int $inventoryId, int $productId, ?string $lotNo, string $invoiceStatus): float
@@ -740,7 +806,13 @@ class SaleInvoiceService
         return $lotBalances;
     }
 
-    private function makeSaleIssueRow(SaleInvoice $invoice, array $requirement, float $quantity, ?string $lotNo): array
+    private function makeSaleIssueRow(
+        SaleInvoice $invoice,
+        array $requirement,
+        float $quantity,
+        ?string $lotNo,
+        array $context = []
+    ): array
     {
         $product = Product::query()->find((int) $requirement['product_id']);
         if (!$product) {
@@ -759,10 +831,12 @@ class SaleInvoiceService
         $unitCost = $quantityBefore > 0 ? ($costBefore / $quantityBefore) : (float) ($product->purchase_price ?? 0);
 
         return [
-            'transaction_date' => $invoice->invoice_date?->format('Y-m-d') ?? now()->toDateString(),
+            'transaction_date' => $context['transaction_date']
+                ?? $invoice->invoice_date?->format('Y-m-d')
+                ?? now()->toDateString(),
             'reference_type' => 'sale_issue',
             'reference_id' => null,
-            'voucher_no' => $invoice->invoice_number,
+            'voucher_no' => $context['voucher_no'] ?? $invoice->invoice_number,
             'product_id' => (int) $product->id,
             'sku' => (string) $product->sku,
             'lot_no' => $lotNo,
@@ -821,4 +895,46 @@ class SaleInvoiceService
             default => 'FIFO',
         };
     }
+
+    private function syncInvoiceItemReservationMetrics(SaleInvoice $invoice, string $status): void
+    {
+        if (!in_array($status, ['ordered', 'reserved'], true)) {
+            return;
+        }
+
+        $items = $invoice->items()->get();
+
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        if ($status === 'reserved') {
+            foreach ($items as $item) {
+                $orderQty = (float) ($item->order_qty ?? $item->quantity ?? 0);
+                $previouslyDelivered = (float) ($item->previously_deliver_qty ?? 0);
+
+                $item->update([
+                    'order_qty' => round($orderQty, 2),
+                    'reserved_qty' => round(max($orderQty - $previouslyDelivered, 0), 2),
+                    'previously_deliver_qty' => round($previouslyDelivered, 2),
+                    'remaining_delivery_qty' => round(max($orderQty - $previouslyDelivered, 0), 2),
+                ]);
+            }
+
+            return;
+        }
+
+        foreach ($items as $item) {
+            $orderQty = (float) ($item->order_qty ?? $item->quantity ?? 0);
+            $previouslyDelivered = (float) ($item->previously_deliver_qty ?? 0);
+
+            $item->update([
+                'order_qty' => round($orderQty, 2),
+                'reserved_qty' => 0,
+                'previously_deliver_qty' => round($previouslyDelivered, 2),
+                'remaining_delivery_qty' => round(max($orderQty - $previouslyDelivered, 0), 2),
+            ]);
+        }
+    }
+
 }
