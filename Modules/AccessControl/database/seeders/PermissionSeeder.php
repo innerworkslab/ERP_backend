@@ -241,6 +241,16 @@ class PermissionSeeder extends Seeder
                 ['name' => 'Reserved Sale Invoice', 'key' => 'reserved_sale_invoice'],
                 ['name' => 'Delivered Sale Invoice', 'key' => 'delivered_sale_invoice']
             ],
+
+            'deliver_note_feature' => [
+                ['name' => 'View Deliver Note', 'key' => 'view_deliver_note'],
+                ['name' => 'Create Deliver Note', 'key' => 'create_deliver_note'],
+                ['name' => 'Update Deliver Note', 'key' => 'update_deliver_note'],
+                ['name' => 'Pending Deliver Note', 'key' => 'pending_deliver_note'],
+                ['name' => 'Confirm Deliver Note', 'key' => 'confirm_deliver_note'],
+                ['name' => 'Reject Deliver Note', 'key' => 'reject_deliver_note'],
+                ['name' => 'Cancel Deliver Note', 'key' => 'cancel_deliver_note'],
+            ],
             
             // Location
             'location_feature' => [

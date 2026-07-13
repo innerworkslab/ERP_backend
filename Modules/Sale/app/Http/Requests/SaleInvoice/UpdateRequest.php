@@ -18,7 +18,7 @@ class UpdateRequest extends FormRequest
             'invoice_date' => ['nullable', 'date'],
             'payment_terms' => ['nullable', 'in:net30,net60,due_on_receipt,advanced_payment,cash_on_delivery'],
             'payment_due_date' => ['nullable', 'date'],
-            'status' => ['nullable', 'in:draft,pending,ordered,reserved,delivered'],
+            'status' => ['nullable', 'in:draft,pending'],
             'remarks' => ['nullable', 'string', 'max:255'],
             'sell_tax_id' => ['nullable', 'integer', 'exists:taxs,id'],
             'invoice_discount_type' => ['nullable', 'in:fixed,percentage'],

@@ -161,11 +161,6 @@ class SaleInvoiceController extends Controller
         return $this->changeStatus($id, 'reserved');
     }
 
-    public function delivered(Request $request, $id)
-    {
-        return $this->changeStatus($id, 'delivered', $request);
-    }
-
     private function changeStatus($id, string $status, ?Request $request = null)
     {
         try {

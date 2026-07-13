@@ -22,6 +22,10 @@ return new class extends Migration
             $table->decimal('discount', 10, 2)->default(0);
             $table->decimal('tax', 10, 2)->default(0);
             $table->decimal('total', 10, 2)->default(0);
+            $table->decimal('order_qty',10 ,2)->default(0);
+            $table->decimal('reserved_qty',10,2)->default(0);
+            $table->decimal('previously_deliver_qty',10,2)->default(0);
+            $table->decimal('remaining_delivery_qty',10,2)->default(0);
             $table->string('remarks')->nullable();
             $table->timestamps();
 
