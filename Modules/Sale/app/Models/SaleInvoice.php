@@ -44,6 +44,7 @@ class SaleInvoice extends Model
         'payment_terms',
         'payment_due_date',
         'status',
+        'inventory_transaction_method',
         'remarks',
         'sell_tax_id',
         'sub_total',

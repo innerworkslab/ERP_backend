@@ -134,7 +134,15 @@ class DeliverNoteController extends Controller
             }
 
             if (($result['status'] ?? null) === 'invalid_transition') {
-                return $this->errorResponse('Invalid status transition', 422);
+                $currentStatus = $result['current_status'] ?? 'unknown';
+                $targetStatus = $result['target_status'] ?? $status;
+                $allowedStatuses = $result['allowed_statuses'] ?? [];
+                $allowedText = !empty($allowedStatuses) ? implode(', ', $allowedStatuses) : 'no further statuses';
+
+                return $this->errorResponse(
+                    "Cannot change deliver note status from {$currentStatus} to {$targetStatus}. Allowed next status: {$allowedText}.",
+                    422
+                );
             }
 
             return $this->successResponse($result['data'] ?? [], 200, 'Deliver note status updated successfully');
