@@ -104,8 +104,14 @@ class DeliverNoteService
                     return ['status' => 'not_found'];
                 }
 
-                if (!$this->isAllowedStatusTransition((string) $existing->status, $status)) {
-                    return ['status' => 'invalid_transition'];
+                $currentStatus = (string) $existing->status;
+                if (!$this->isAllowedStatusTransition($currentStatus, $status)) {
+                    return [
+                        'status' => 'invalid_transition',
+                        'current_status' => $currentStatus,
+                        'target_status' => $status,
+                        'allowed_statuses' => $this->allowedNextStatuses($currentStatus),
+                    ];
                 }
 
                 if ($status === 'confirmed') {
@@ -114,12 +120,14 @@ class DeliverNoteService
                         ->lockForUpdate()
                         ->firstOrFail();
                     $this->assertStillDeliverable($existing);
-                    $this->saleInvoiceService->issueDeliverNote($existing);
+                    $stockRows = $this->saleInvoiceService->issueDeliverNote($existing);
                 }
 
                 $updated = $this->repository->update($id, ['status' => $status]);
 
                 if ($status === 'confirmed') {
+                    $this->saleInvoiceService->postDeliverNoteCogsAccounting($updated, $stockRows ?? []);
+                    $this->saleInvoiceService->postDeliverNoteCashbookTransaction($updated);
                     $this->syncInvoiceDeliveryMetrics($updated);
                     $this->saleInvoiceService->syncDeliveredStatusIfComplete((int) $existing->sale_invoice_id);
                 }
@@ -302,15 +310,18 @@ class DeliverNoteService
 
     private function isAllowedStatusTransition(string $current, string $next): bool
     {
-        $allowed = [
+        return in_array($next, $this->allowedNextStatuses($current), true);
+    }
+
+    private function allowedNextStatuses(string $current): array
+    {
+        return [
             'draft' => ['pending', 'cancelled'],
             'pending' => ['draft', 'confirmed', 'rejected', 'cancelled'],
             'rejected' => ['draft', 'cancelled'],
             'confirmed' => [],
             'cancelled' => [],
-        ];
-
-        return in_array($next, $allowed[$current] ?? [], true);
+        ][$current] ?? [];
     }
 
     private function generateDeliverNoteNumber(): string

@@ -5,6 +5,13 @@ namespace Modules\Sale\app\Http\Services;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Modules\Accounting\app\Http\Repositories\AccountRepository;
+use Modules\Accounting\app\Models\Account;
+use Modules\Accounting\app\Models\Cashbook;
+use Modules\Accounting\app\Models\CashbookLedger;
+use Modules\Accounting\app\Models\CashbookTransaction;
+use Modules\Accounting\app\Models\JournalEntry;
+use Modules\Accounting\app\Models\JournalPosting;
 use Modules\Inventory\app\Http\Repositories\StockBalanceRepository;
 use Modules\Inventory\app\Http\Services\StockLedgerService;
 use Modules\Inventory\app\Http\Services\UOMConversionService;
@@ -22,18 +29,21 @@ class SaleInvoiceService
     protected $stock_balance_repository;
     protected $stock_ledger_service;
     protected $uom_conversion_service;
+    protected $account_repository;
 
     public function __construct(
         SaleInvoiceRepository $sale_invoice_repository,
         StockBalanceRepository $stock_balance_repository,
         StockLedgerService $stock_ledger_service,
-        UOMConversionService $uom_conversion_service
+        UOMConversionService $uom_conversion_service,
+        AccountRepository $account_repository
     )
     {
         $this->sale_invoice_repository = $sale_invoice_repository;
         $this->stock_balance_repository = $stock_balance_repository;
         $this->stock_ledger_service = $stock_ledger_service;
         $this->uom_conversion_service = $uom_conversion_service;
+        $this->account_repository = $account_repository;
     }
 
     public function getDataWithPagination(
@@ -178,6 +188,10 @@ class SaleInvoiceService
 
                 $updated = $this->sale_invoice_repository->update($id, ['status' => $status]);
 
+                if (in_array($status, ['ordered', 'reserved'], true)) {
+                    $this->postSaleInvoiceAccounting($updated);
+                }
+
                 return ['status' => 'success', 'data' => $updated];
             });
         } catch (Exception $e) {
@@ -215,7 +229,7 @@ class SaleInvoiceService
         }
     }
 
-    public function issueDeliverNote(DeliverNote $deliverNote): void
+    public function issueDeliverNote(DeliverNote $deliverNote): array
     {
         $deliverNote->loadMissing('items');
         $invoice = SaleInvoice::with(['items.product'])->find($deliverNote->sale_invoice_id);
@@ -238,11 +252,143 @@ class SaleInvoiceService
             'quantity' => (float) $item->quantity,
         ])->all();
 
-        $this->createSaleIssueMovements($invoice, [
+        return $this->createSaleIssueMovements($invoice, [
             'allocations' => $allocations,
             'transaction_date' => $deliverNote->delivery_date?->format('Y-m-d') ?? now()->toDateString(),
             'voucher_no' => $deliverNote->deliver_note_no,
         ]);
+    }
+
+    public function postDeliverNoteCogsAccounting(DeliverNote $deliverNote, array $stockRows): void
+    {
+        if ($this->journalEntryExists('deliver_note_cogs', (int) $deliverNote->id)) {
+            return;
+        }
+
+        $amount = round(array_reduce($stockRows, function (float $total, array $row) {
+            return $total + abs((float) ($row['total_cost'] ?? 0));
+        }, 0.0), 8);
+
+        if ($amount <= 0) {
+            return;
+        }
+
+        $cogs = $this->resolveAccount('6-0000', 'COGS account (6-0000) is missing in COA.');
+        $inventory = $this->resolveAccount('2-1024', 'Inventory account (2-1024) is missing in COA.');
+        $currencyId = (int) $deliverNote->currency_id;
+        $rate = $this->currencyRate((int) $currencyId);
+
+        $this->createJournalEntry([
+            'voucher_no' => $this->nextJournalVoucherNo(),
+            'journal_date' => $deliverNote->delivery_date?->format('Y-m-d') ?? now()->toDateString(),
+            'journal_datetime' => now(),
+            'source_type' => 'deliver_note_cogs',
+            'source_id' => $deliverNote->id,
+            'description' => 'Deliver note COGS posting for ' . $deliverNote->deliver_note_no,
+        ], [
+            [
+                'account_id' => $cogs->id,
+                'type' => 'debit',
+                'currency_id' => $currencyId,
+                'amount' => $amount,
+                'base_currency_amount' => round($amount * $rate, 8),
+            ],
+            [
+                'account_id' => $inventory->id,
+                'type' => 'credit',
+                'currency_id' => $currencyId,
+                'amount' => $amount,
+                'base_currency_amount' => round($amount * $rate, 8),
+            ],
+        ]);
+    }
+
+    public function postDeliverNoteCashbookTransaction(DeliverNote $deliverNote): void
+    {
+        $deliverNote->loadMissing(['saleInvoice.customer', 'saleInvoice.delivery', 'saleInvoice.currency']);
+        $invoice = $deliverNote->saleInvoice;
+        $delivery = $invoice?->delivery;
+
+        if (!$invoice || !$delivery) {
+            return;
+        }
+
+        if ((string) $delivery->delivery_charge_paid !== 'shipper') {
+            return;
+        }
+
+        $remainingReceivable = max((float) $invoice->grand_total - (float) $invoice->paid_amount, 0);
+        $amount = round(min((float) $delivery->delivery_charge, $remainingReceivable), 8);
+        if ($amount <= 0) {
+            return;
+        }
+
+        if (empty($invoice->cashbook_id)) {
+            throw new \RuntimeException('Cashbook is required to post deliver note delivery charge.');
+        }
+
+        $referenceNo = 'DNPAY-' . $invoice->invoice_number;
+        $existingTransaction = CashbookTransaction::query()
+            ->where('reference_no', $referenceNo)
+            ->first();
+
+        $arAccount = $this->resolveCustomerArAccount($invoice);
+        $cashbook = Cashbook::query()->lockForUpdate()->find((int) $invoice->cashbook_id);
+        if (!$cashbook) {
+            throw new \RuntimeException('Cashbook not found.');
+        }
+
+        if ((int) $cashbook->currency_id !== (int) $deliverNote->currency_id) {
+            throw new \RuntimeException('Cashbook currency must match deliver note currency.');
+        }
+
+        $rate = $this->currencyRate((int) $deliverNote->currency_id);
+        if ($existingTransaction) {
+            $this->ensureCashbookLedgerForTransaction($existingTransaction);
+        } else {
+            $this->createCashbookInflow(
+                cashbook: $cashbook,
+                sourceAccount: $arAccount,
+                currencyId: (int) $deliverNote->currency_id,
+                amount: $amount,
+                rate: $rate,
+                referenceNo: $referenceNo,
+                remark: 'Deliver note delivery charge collection',
+                description: 'Delivery charge collection for sale invoice ' . $invoice->invoice_number
+            );
+        }
+
+        $newPaidAmount = round((float) $invoice->paid_amount + $amount, 2);
+        $invoice->update([
+            'paid_amount' => $newPaidAmount,
+            'payment_status' => $this->resolvePaymentStatus($newPaidAmount, (float) $invoice->grand_total),
+        ]);
+
+        if (!$this->journalEntryExists('sale_invoice_delivery_charge', (int) $invoice->id)) {
+            $this->createJournalEntry([
+                'voucher_no' => $this->nextJournalVoucherNo(),
+                'journal_date' => $deliverNote->delivery_date?->format('Y-m-d') ?? now()->toDateString(),
+                'journal_datetime' => now(),
+                'source_type' => 'sale_invoice_delivery_charge',
+                'source_id' => $invoice->id,
+                'description' => 'Delivery charge collection for sale invoice ' . $invoice->invoice_number,
+            ], [
+                [
+                    'account_id' => $cashbook->account_id,
+                    'type' => 'debit',
+                    'currency_id' => (int) $deliverNote->currency_id,
+                    'amount' => $amount,
+                    'base_currency_amount' => round($amount * $rate, 8),
+                ],
+                [
+                    'account_id' => $arAccount->id,
+                    'type' => 'credit',
+                    'currency_id' => (int) $deliverNote->currency_id,
+                    'amount' => $amount,
+                    'base_currency_amount' => round($amount * $rate, 8),
+                ],
+            ]);
+        }
     }
 
     private function normalizePayload(array $attributes, ?SaleInvoice $existing = null): array
@@ -349,7 +495,7 @@ class SaleInvoiceService
         }
 
         $grandTotal = $subTotal - $itemsDiscount - $invoiceDiscountValue + $taxTotal;
-        if ($deliveryChargePaid === 'receiver') {
+        if ($deliveryChargePaid === 'shipper') {
             $grandTotal += $deliveryCharge;
         }
         $grandTotal = round($grandTotal, 2);
@@ -531,12 +677,319 @@ class SaleInvoiceService
         }
     }
 
-    private function createSaleIssueMovements(SaleInvoice $invoice, array $context = []): void
+    private function createSaleIssueMovements(SaleInvoice $invoice, array $context = []): array
     {
         $this->assertDeliveryAvailability($invoice, $context);
         $allocations = $this->resolveDeliveryAllocations($invoice, $context);
 
         $this->stock_ledger_service->addBulkStockLedger($allocations);
+
+        return $allocations;
+    }
+
+    private function postSaleInvoiceAccounting(SaleInvoice $invoice): void
+    {
+        $invoice->loadMissing(['customer', 'currency']);
+
+        $arAccount = $this->resolveCustomerArAccount($invoice);
+        $salesIncome = $this->resolveAccount('5-0000', 'Sales income account (5-0000) is missing in COA.');
+        $currencyId = (int) $invoice->currency_id;
+        $amount = round((float) $invoice->grand_total, 8);
+        $rate = $this->invoiceCurrencyRate($invoice);
+
+        if ($amount <= 0) {
+            return;
+        }
+
+        if (!$this->journalEntryExists('sale_invoice_revenue', (int) $invoice->id)) {
+            $this->createJournalEntry([
+                'voucher_no' => $this->nextJournalVoucherNo(),
+                'journal_date' => $invoice->invoice_date?->format('Y-m-d') ?? now()->toDateString(),
+                'journal_datetime' => now(),
+                'source_type' => 'sale_invoice_revenue',
+                'source_id' => $invoice->id,
+                'description' => 'Sale invoice revenue posting for ' . $invoice->invoice_number,
+            ], [
+                [
+                    'account_id' => $arAccount->id,
+                    'type' => 'debit',
+                    'currency_id' => $currencyId,
+                    'amount' => $amount,
+                    'base_currency_amount' => round($amount * $rate, 8),
+                ],
+                [
+                    'account_id' => $salesIncome->id,
+                    'type' => 'credit',
+                    'currency_id' => $currencyId,
+                    'amount' => $amount,
+                    'base_currency_amount' => round($amount * $rate, 8),
+                ],
+            ]);
+        }
+
+        $this->postSaleInvoiceCashbookReceipt($invoice, $arAccount);
+    }
+
+    private function postSaleInvoiceCashbookReceipt(SaleInvoice $invoice, Account $arAccount): void
+    {
+        $paidAmount = round((float) $invoice->paid_amount, 8);
+        if ($paidAmount <= 0) {
+            return;
+        }
+
+        if (empty($invoice->cashbook_id)) {
+            throw new \RuntimeException('Cashbook is required when paid amount is greater than zero.');
+        }
+
+        $referenceNo = 'SIPAY-' . $invoice->invoice_number;
+        $existingTransaction = CashbookTransaction::query()
+            ->where('reference_no', $referenceNo)
+            ->first();
+
+        $cashbook = Cashbook::query()->lockForUpdate()->find((int) $invoice->cashbook_id);
+        if (!$cashbook) {
+            throw new \RuntimeException('Cashbook not found.');
+        }
+
+        if ((int) $cashbook->currency_id !== (int) $invoice->currency_id) {
+            throw new \RuntimeException('Cashbook currency must match sale invoice currency.');
+        }
+
+        $rate = $this->invoiceCurrencyRate($invoice);
+        if ($existingTransaction) {
+            $this->ensureCashbookLedgerForTransaction($existingTransaction);
+        } else {
+            $this->createCashbookInflow(
+                cashbook: $cashbook,
+                sourceAccount: $arAccount,
+                currencyId: (int) $invoice->currency_id,
+                amount: $paidAmount,
+                rate: $rate,
+                referenceNo: $referenceNo,
+                remark: 'Sale invoice receipt',
+                description: 'Receipt for sale invoice ' . $invoice->invoice_number
+            );
+        }
+
+        if (!$this->journalEntryExists('sale_invoice_payment', (int) $invoice->id)) {
+            $this->createJournalEntry([
+                'voucher_no' => $this->nextJournalVoucherNo(),
+                'journal_date' => $invoice->invoice_date?->format('Y-m-d') ?? now()->toDateString(),
+                'journal_datetime' => now(),
+                'source_type' => 'sale_invoice_payment',
+                'source_id' => $invoice->id,
+                'description' => 'Sale invoice receipt for ' . $invoice->invoice_number,
+            ], [
+                [
+                    'account_id' => $cashbook->account_id,
+                    'type' => 'debit',
+                    'currency_id' => (int) $invoice->currency_id,
+                    'amount' => $paidAmount,
+                    'base_currency_amount' => round($paidAmount * $rate, 8),
+                ],
+                [
+                    'account_id' => $arAccount->id,
+                    'type' => 'credit',
+                    'currency_id' => (int) $invoice->currency_id,
+                    'amount' => $paidAmount,
+                    'base_currency_amount' => round($paidAmount * $rate, 8),
+                ],
+            ]);
+        }
+    }
+
+    private function resolveCustomerArAccount(SaleInvoice $invoice): Account
+    {
+        $parent = $this->resolveAccount('2-2000', 'Accounts receivable parent account (2-2000) is missing in COA.');
+        $customerName = trim((string) ($invoice->customer?->name ?? $invoice->customer?->company_name ?? 'Customer-' . $invoice->customer_id));
+
+        $account = Account::query()
+            ->where('parent_account_id', $parent->id)
+            ->where('name', $customerName)
+            ->first();
+
+        if ($account) {
+            if (!$account->is_active) {
+                $account->update(['is_active' => true]);
+            }
+
+            return $account;
+        }
+
+        return Account::create([
+            'parent_account_id' => $parent->id,
+            'code' => $this->account_repository->generateAccountCode($parent->id),
+            'name' => $customerName,
+            'type' => 'Accounts Receivable',
+            'division' => 'SOFP',
+            'description' => 'Auto generated AR account for customer ' . $customerName,
+            'is_active' => true,
+        ]);
+    }
+
+    private function resolveAccount(string $code, string $missingMessage): Account
+    {
+        $account = Account::where('code', $code)->first();
+        if (!$account) {
+            throw new \RuntimeException($missingMessage);
+        }
+
+        return $account;
+    }
+
+    private function createJournalEntry(array $header, array $postings): JournalEntry
+    {
+        $journalEntry = JournalEntry::create([
+            'voucher_no' => $header['voucher_no'] ?? $this->nextJournalVoucherNo(),
+            'journal_date' => $header['journal_date'] ?? now()->toDateString(),
+            'journal_datetime' => $header['journal_datetime'] ?? now(),
+            'source_type' => $header['source_type'],
+            'source_id' => $header['source_id'],
+            'description' => $header['description'] ?? null,
+        ]);
+
+        foreach ($postings as $posting) {
+            JournalPosting::create([
+                'journal_entry_id' => $journalEntry->id,
+                'account_id' => $posting['account_id'],
+                'type' => $posting['type'],
+                'currency_id' => $posting['currency_id'],
+                'amount' => $posting['amount'],
+                'base_currency_amount' => $posting['base_currency_amount'],
+            ]);
+        }
+
+        return $journalEntry;
+    }
+
+    private function createCashbookInflow(
+        Cashbook $cashbook,
+        Account $sourceAccount,
+        int $currencyId,
+        float $amount,
+        float $rate,
+        string $referenceNo,
+        string $remark,
+        string $description
+    ): CashbookTransaction {
+        $lastLedger = CashbookLedger::query()
+            ->where('cashbook_id', $cashbook->id)
+            ->orderByDesc('id')
+            ->lockForUpdate()
+            ->first();
+        $beforeBalance = $lastLedger ? (float) $lastLedger->after_balance : (float) $cashbook->current_balance;
+        $afterBalance = $beforeBalance + $amount;
+
+        $transaction = CashbookTransaction::create([
+            'cashbook_id' => $cashbook->id,
+            'source_account_id' => $sourceAccount->id,
+            'destination_account_id' => $cashbook->account_id,
+            'transaction_type' => 'in',
+            'category' => 'income',
+            'transaction_datetime' => now(),
+            'currency_id' => $currencyId,
+            'amount' => $amount,
+            'base_currency_amount' => round($amount * $rate, 8),
+            'reference_no' => $referenceNo,
+            'remark' => $remark,
+            'description' => $description,
+            'status' => 'confirmed',
+            'created_by' => auth()->id(),
+        ]);
+
+        CashbookLedger::create([
+            'cashbook_id' => $cashbook->id,
+            'cashbook_transaction_id' => $transaction->id,
+            'transaction_datetime' => now(),
+            'transaction_type' => 'in',
+            'amount' => $amount,
+            'before_balance' => $beforeBalance,
+            'after_balance' => $afterBalance,
+            'remark' => $remark,
+            'description' => 'Cashbook inflow for ' . $referenceNo,
+        ]);
+
+        $cashbook->update([
+            'current_balance' => $afterBalance,
+            'updated_by' => auth()->id(),
+        ]);
+
+        return $transaction;
+    }
+
+    private function ensureCashbookLedgerForTransaction(CashbookTransaction $transaction): void
+    {
+        if (CashbookLedger::query()->where('cashbook_transaction_id', $transaction->id)->exists()) {
+            return;
+        }
+
+        $cashbook = Cashbook::query()->lockForUpdate()->find((int) $transaction->cashbook_id);
+        if (!$cashbook) {
+            throw new \RuntimeException('Cashbook not found.');
+        }
+
+        $lastLedger = CashbookLedger::query()
+            ->where('cashbook_id', $cashbook->id)
+            ->orderByDesc('id')
+            ->lockForUpdate()
+            ->first();
+        $beforeBalance = $lastLedger ? (float) $lastLedger->after_balance : (float) $cashbook->current_balance;
+        $amount = (float) $transaction->amount;
+        $afterBalance = $transaction->transaction_type === 'in'
+            ? $beforeBalance + $amount
+            : $beforeBalance - $amount;
+
+        CashbookLedger::create([
+            'cashbook_id' => $cashbook->id,
+            'cashbook_transaction_id' => $transaction->id,
+            'transaction_datetime' => now(),
+            'transaction_type' => $transaction->transaction_type,
+            'amount' => $amount,
+            'before_balance' => $beforeBalance,
+            'after_balance' => $afterBalance,
+            'remark' => $transaction->remark,
+            'description' => 'Cashbook ledger for ' . $transaction->reference_no,
+        ]);
+
+        $cashbook->update([
+            'current_balance' => $afterBalance,
+            'updated_by' => auth()->id(),
+        ]);
+    }
+
+    private function journalEntryExists(string $sourceType, int $sourceId): bool
+    {
+        return JournalEntry::query()
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->exists();
+    }
+
+    private function nextJournalVoucherNo(): string
+    {
+        $voucherPrefix = 'JV-' . now()->format('Ymd') . '-';
+        $lastVoucher = JournalEntry::where('voucher_no', 'like', $voucherPrefix . '%')
+            ->orderByDesc('id')
+            ->value('voucher_no');
+
+        $nextVoucherSeq = 1;
+        if ($lastVoucher) {
+            $nextVoucherSeq = ((int) substr($lastVoucher, -4)) + 1;
+        }
+
+        return $voucherPrefix . str_pad((string) $nextVoucherSeq, 4, '0', STR_PAD_LEFT);
+    }
+
+    private function invoiceCurrencyRate(SaleInvoice $invoice): float
+    {
+        return (float) ($invoice->exchange_rate ?: $invoice->currency?->exchange_rate ?: 1);
+    }
+
+    private function currencyRate(int $currencyId): float
+    {
+        $currency = Currency::find($currencyId);
+
+        return (float) ($currency?->exchange_rate ?: 1);
     }
 
     private function assertDeliveryAvailability(SaleInvoice $invoice, array $context = []): void
@@ -605,98 +1058,192 @@ class SaleInvoiceService
 
         $providedAllocations = $context['allocations'] ?? $context['delivery_allocations'] ?? [];
         $rows = [];
-        $remainingByProduct = [];
-
-        foreach ($requirements as $productId => $requirement) {
-            $remainingByProduct[$productId] = (float) $requirement['quantity'];
-        }
 
         if ($method === 'CUSTOM_BATCH' && empty($providedAllocations)) {
             throw new \RuntimeException('Custom batch delivery requires selected product lots.');
         }
 
         if (!empty($providedAllocations)) {
-            foreach ($providedAllocations as $allocation) {
-                $productId = (int) ($allocation['product_id'] ?? 0);
-                if (!array_key_exists($productId, $requirements)) {
-                    throw new \RuntimeException('Delivery allocation contains an unknown product.');
-                }
-
-                $quantity = (float) ($allocation['quantity'] ?? 0);
-                if ($quantity <= 0) {
-                    throw new \RuntimeException('Delivery allocation quantity must be greater than zero.');
-                }
-
-                $uomId = (int) ($allocation['uom_id'] ?? $requirements[$productId]['uom_id']);
-                $stockUomId = (int) $requirements[$productId]['stock_uom_id'];
-                $stockQuantity = $this->convertQuantityToStockUom($quantity, $uomId, $stockUomId);
-
-                if (!$this->allowsNegativeStock() && $stockQuantity > $remainingByProduct[$productId] + 0.00001) {
-                    throw new \RuntimeException(
-                        'Delivery quantity exceeds the invoice quantity for product ' . $requirements[$productId]['product_name'] . '.'
-                    );
-                }
-
-                $lotNo = $this->resolveLotNoFromAllocation($allocation, (int) $productId);
-
-                if ($method === 'CUSTOM_BATCH' && $lotNo === null) {
-                    throw new \RuntimeException('Custom batch delivery requires a selected product lot.');
-                }
-
-                $lotAvailableQuantity = $this->getLotAvailableQuantity((int) $invoice->inventory_id, $productId, $lotNo, $invoiceStatus);
-
-                if ($lotNo !== null && !$this->allowsNegativeStock() && $stockQuantity > $lotAvailableQuantity + 0.00001) {
-                    throw new \RuntimeException('Selected batch does not have enough quantity.');
-                }
-
-                $rows[] = $this->makeSaleIssueRow(
-                    invoice: $invoice,
-                    requirement: $requirements[$productId],
-                    quantity: $stockQuantity,
-                    lotNo: $lotNo,
-                    context: $context
-                );
-
-                $remainingByProduct[$productId] -= $stockQuantity;
-            }
-
-            return $rows;
+            return $this->makeSaleIssueRowsFromProvidedAllocations(
+                invoice: $invoice,
+                allocations: $providedAllocations,
+                requirements: $requirements,
+                method: $method,
+                invoiceStatus: $invoiceStatus,
+                context: $context
+            );
         }
 
         foreach ($requirements as $productId => $requirement) {
-            $lotBalances = $this->stock_balance_repository->getLotBalancesForProduct((int) $invoice->inventory_id, (int) $productId);
-            $sortedLots = $this->sortLotBalances($lotBalances, $method);
-            $remaining = (float) $requirement['quantity'];
-
-            foreach ($sortedLots as $lotBalance) {
-                if ($remaining <= 0) {
-                    break;
-                }
-
-                $availableQuantity = (float) ($lotBalance['available_quantity'] ?? $lotBalance['on_hand_quantity'] ?? 0);
-                if ($invoiceStatus === 'reserved') {
-                    $availableQuantity = (float) ($lotBalance['on_hand_quantity'] ?? 0);
-                }
-
-                if ($availableQuantity <= 0) {
-                    continue;
-                }
-
-                $pickedQuantity = min($remaining, $availableQuantity);
-                $rows[] = $this->makeSaleIssueRow(
+            $rows = array_merge(
+                $rows,
+                $this->makeSaleIssueRowsFromAvailableLots(
                     invoice: $invoice,
                     requirement: $requirement,
-                    quantity: $pickedQuantity,
-                    lotNo: $lotBalance['lot_no'] !== '' ? (string) $lotBalance['lot_no'] : null,
+                    quantity: (float) $requirement['quantity'],
+                    method: $method,
+                    invoiceStatus: $invoiceStatus,
                     context: $context
-                );
+                )
+            );
+        }
 
-                $remaining -= $pickedQuantity;
+        return $rows;
+    }
+
+    private function makeSaleIssueRowsFromProvidedAllocations(
+        SaleInvoice $invoice,
+        array $allocations,
+        array $requirements,
+        string $method,
+        string $invoiceStatus,
+        array $context = []
+    ): array
+    {
+        $remainingByProduct = [];
+        $autoAllocatedQuantities = [];
+        $explicitLotAllocatedQuantities = [];
+
+        foreach ($requirements as $productId => $requirement) {
+            $remainingByProduct[$productId] = (float) $requirement['quantity'];
+        }
+
+        foreach ($allocations as $allocation) {
+            $productId = (int) ($allocation['product_id'] ?? 0);
+            if (!array_key_exists($productId, $requirements)) {
+                throw new \RuntimeException('Delivery allocation contains an unknown product.');
             }
 
-            if ($remaining > 0.00001 && !$this->allowsNegativeStock()) {
+            $quantity = (float) ($allocation['quantity'] ?? 0);
+            if ($quantity <= 0) {
+                throw new \RuntimeException('Delivery allocation quantity must be greater than zero.');
+            }
+
+            $uomId = (int) ($allocation['uom_id'] ?? $requirements[$productId]['uom_id']);
+            $stockUomId = (int) $requirements[$productId]['stock_uom_id'];
+            $stockQuantity = $this->convertQuantityToStockUom($quantity, $uomId, $stockUomId);
+
+            if (!$this->allowsNegativeStock() && $stockQuantity > $remainingByProduct[$productId] + 0.00001) {
+                throw new \RuntimeException(
+                    'Delivery quantity exceeds the invoice quantity for product ' . $requirements[$productId]['product_name'] . '.'
+                );
+            }
+
+            $lotNo = $this->resolveLotNoFromAllocation($allocation, $productId);
+            if ($method === 'CUSTOM_BATCH' && $lotNo === null) {
+                throw new \RuntimeException('Custom batch delivery requires a selected product lot.');
+            }
+
+            if ($lotNo === null) {
+                $autoAllocatedQuantities[$productId] = ($autoAllocatedQuantities[$productId] ?? 0) + $stockQuantity;
+            } else {
+                $key = $productId . '|' . $lotNo;
+                if (!isset($explicitLotAllocatedQuantities[$key])) {
+                    $explicitLotAllocatedQuantities[$key] = [
+                        'product_id' => $productId,
+                        'lot_no' => $lotNo,
+                        'quantity' => 0.0,
+                    ];
+                }
+                $explicitLotAllocatedQuantities[$key]['quantity'] += $stockQuantity;
+            }
+
+            $remainingByProduct[$productId] -= $stockQuantity;
+        }
+
+        $rows = [];
+
+        foreach ($explicitLotAllocatedQuantities as $allocation) {
+            $productId = (int) $allocation['product_id'];
+            $lotNo = (string) $allocation['lot_no'];
+            $stockQuantity = (float) $allocation['quantity'];
+            $lotAvailableQuantity = $this->getLotAvailableQuantity((int) $invoice->inventory_id, $productId, $lotNo, $invoiceStatus);
+
+            if (!$this->allowsNegativeStock() && $stockQuantity > $lotAvailableQuantity + 0.00001) {
+                throw new \RuntimeException('Selected batch does not have enough quantity.');
+            }
+
+            $rows[] = $this->makeSaleIssueRow(
+                invoice: $invoice,
+                requirement: $requirements[$productId],
+                quantity: $stockQuantity,
+                lotNo: $lotNo,
+                context: $context
+            );
+        }
+
+        foreach ($autoAllocatedQuantities as $productId => $stockQuantity) {
+            $rows = array_merge(
+                $rows,
+                $this->makeSaleIssueRowsFromAvailableLots(
+                    invoice: $invoice,
+                    requirement: $requirements[$productId],
+                    quantity: (float) $stockQuantity,
+                    method: $method,
+                    invoiceStatus: $invoiceStatus,
+                    context: $context
+                )
+            );
+        }
+
+        return $rows;
+    }
+
+    private function makeSaleIssueRowsFromAvailableLots(
+        SaleInvoice $invoice,
+        array $requirement,
+        float $quantity,
+        string $method,
+        string $invoiceStatus,
+        array $context = []
+    ): array
+    {
+        $rows = [];
+        $remaining = $quantity;
+        $lotBalances = $this->stock_balance_repository->getLotBalancesForProduct(
+            (int) $invoice->inventory_id,
+            (int) $requirement['product_id']
+        );
+        $sortedLots = $this->sortLotBalances($lotBalances, $method);
+
+        foreach ($sortedLots as $lotBalance) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $availableQuantity = (float) ($lotBalance['available_quantity'] ?? $lotBalance['on_hand_quantity'] ?? 0);
+            if ($invoiceStatus === 'reserved') {
+                $availableQuantity = (float) ($lotBalance['on_hand_quantity'] ?? 0);
+            }
+
+            if ($availableQuantity <= 0) {
+                continue;
+            }
+
+            $pickedQuantity = min($remaining, $availableQuantity);
+            $rows[] = $this->makeSaleIssueRow(
+                invoice: $invoice,
+                requirement: $requirement,
+                quantity: $pickedQuantity,
+                lotNo: $lotBalance['lot_no'] !== '' ? (string) $lotBalance['lot_no'] : null,
+                context: $context
+            );
+
+            $remaining -= $pickedQuantity;
+        }
+
+        if ($remaining > 0.00001) {
+            if (!$this->allowsNegativeStock()) {
                 throw new \RuntimeException('Insufficient stock for product ' . $requirement['product_name'] . '.');
             }
+
+            $rows[] = $this->makeSaleIssueRow(
+                invoice: $invoice,
+                requirement: $requirement,
+                quantity: $remaining,
+                lotNo: null,
+                context: $context
+            );
         }
 
         return $rows;
